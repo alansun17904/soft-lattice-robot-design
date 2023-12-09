@@ -33,10 +33,11 @@ The resulting json file will be a list of dictionaries that follow the format:
 
 import sys
 import json
+import uuid
 
 
 class Robot:
-    def __init__(self, matrix):
+    def __init__(self, matrix, id_len=5):
         """Uses an nxn binary matrix to generate a robot.
         Define the bottom left corner of the matrix as 0,0 and the top-right corner
         as n-1,n-1
@@ -44,14 +45,15 @@ class Robot:
         self.objects = []
         self.springs = []
         self.angle_springs = []
+        self.name = uuid.uuid4().__str__()[:id_len]
 
         n = len(matrix)
         for i in range(n):
             for j in range(n):
                 if matrix[i][j] == 1:
-                    self.add_mesh_square(n - i - 1, j)
+                    self.add_mesh_square(j, n-i-1)
 
-    def add_spring(self, a, b, length=None, stiffness=1, actuation=0.15):
+    def add_spring(self, a, b, length=None, stiffness=1.4e4, actuation=0.15):
         """Adds a spring between two objects `a` and `b`.
         :param a: the index of the first connector object from self.objects
         :param b: the index of the second connector object from self.objects
@@ -61,8 +63,8 @@ class Robot:
         """
         if length is None:
             length = (
-                (self.objects[a][0] - self.objects[b][0]) ** 2
-                + (self.objects[a][1] - self.objects[b][0]) ** 2
+                (self.objects[b][0] - self.objects[a][0]) ** 2
+                + (self.objects[b][1] - self.objects[a][1]) ** 2
             ) ** 0.5
         self.springs.append([a, b, length, stiffness, actuation])
 
@@ -102,19 +104,20 @@ class Robot:
             a ----- c
 
         """
+        s = 3e4
         a = self.add_mesh_point(x, y)
         b = self.add_mesh_point(x, y + 1)
         c = self.add_mesh_point(x + 1, y)
         d = self.add_mesh_point(x + 1, y + 1)
         e = self.add_mesh_point(x + 0.5, y + 0.5)
-        self.add_mesh_spring(a, b, 3e4, actuation)
-        self.add_mesh_spring(c, d, 3e4, actuation)
-        self.add_mesh_spring(b, d, 3e4, actuation)
-        self.add_mesh_spring(a, c, 3e4, actuation)
-        self.add_mesh_spring(a, e, 3e4, 0)
-        self.add_mesh_spring(b, e, 3e4, 0)
-        self.add_mesh_spring(c, e, 3e4, 0)
-        self.add_mesh_spring(d, e, 3e4, 0)
+        self.add_mesh_spring(a, b, s, actuation)
+        self.add_mesh_spring(c, d, s, actuation)
+        self.add_mesh_spring(b, d, s, actuation)
+        self.add_mesh_spring(a, c, s, actuation)
+        self.add_mesh_spring(a, e, s, 0)
+        self.add_mesh_spring(b, e, s, 0)
+        self.add_mesh_spring(c, e, s, 0)
+        self.add_mesh_spring(d, e, s, 0)
         self.angle_springs.extend(
             [
                 [a, b, e, 1],
@@ -140,8 +143,10 @@ if __name__ == "__main__":
     matrices = json.load(open(input_filename, "r"))
     for matrix in matrices:
         r = Robot(matrix)
+        print(r.name)
         robot_configs.append(
             {
+                # "name": r.name,
                 "objects": r.objects,
                 "springs": r.springs,
                 "angle_springs": r.angle_springs,
