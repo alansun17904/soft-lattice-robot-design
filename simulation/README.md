@@ -20,3 +20,9 @@ This will simulate all of the robots in the `robots/` directory and export their
 python3 generate_robot_config.py sample_robot.json robots/
 ./simulate.sh
 ```
+
+## More Complicated Environments
+In this section, we cover how to enable more complicated environments. Currently supported:
+- Staircase
+- Flat but with one variable gap size
+- Flat but robot starts on the other side of the map

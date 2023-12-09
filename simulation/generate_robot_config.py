@@ -39,6 +39,7 @@ from pathlib import Path
 
 class Robot:
     name = -1
+
     def __init__(self, matrix, id_len=5):
         """Uses an nxn binary matrix to generate a robot.
         Define the bottom left corner of the matrix as 0,0 and the top-right corner
@@ -53,7 +54,7 @@ class Robot:
         for i in range(n):
             for j in range(n):
                 if matrix[i][j] == 1:
-                    self.add_mesh_square(j, n-i-1)
+                    self.add_mesh_square(j, n - i - 1)
 
     def add_spring(self, a, b, length=None, stiffness=1.4e4, actuation=0.15):
         """Adds a spring between two objects `a` and `b`.
@@ -132,9 +133,7 @@ class Robot:
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
-        print(
-            "Usage: python generate_robot_config.py <path-to-json-file> <output-dir>"
-        )
+        print("Usage: python generate_robot_config.py <path-to-json-file> <output-dir>")
         sys.exit(1)
 
     input_filename = sys.argv[1]
@@ -146,8 +145,8 @@ if __name__ == "__main__":
     for matrix in matrices:
         r = Robot(matrix)
         config = {
-                "objects": r.objects,
-                "springs": r.springs,
-                "angle_springs": r.angle_springs,
+            "objects": r.objects,
+            "springs": r.springs,
+            "angle_springs": r.angle_springs,
         }
         json.dump(config, open(Path(output_dir) / f"{r.name}.json", "w+"))
