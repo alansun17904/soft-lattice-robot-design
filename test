@@ -42,10 +42,10 @@ spring_omega = 10
 damping = 15
 
 n_springs = 0
-n_angles = 0
-angle_anchor_a = ti.field(ti.i32)
-angle_anchor_b = ti.field(ti.i32)
-angle_anchor_c = ti.field(ti.i32)
+# n_angles = 0
+# angle_anchor_a = ti.field(ti.i32)
+# angle_anchor_b = ti.field(ti.i32)
+# angle_anchor_c = ti.field(ti.i32)
 angle_stiffness = scalar()
 spring_anchor_a = ti.field(ti.i32)
 spring_anchor_b = ti.field(ti.i32)
@@ -78,9 +78,9 @@ def allocate_fields():
         spring_stiffness,
         spring_actuation,
     )
-    ti.root.dense(ti.i, n_angles).place(
-        angle_anchor_a, angle_anchor_b, angle_anchor_c, angle_stiffness
-    )
+    # ti.root.dense(ti.i, n_angles).place(
+    #     angle_anchor_a, angle_anchor_b, angle_anchor_c, angle_stiffness
+    # )
     ti.root.dense(ti.ij, (n_hidden, n_input_states())).place(weights1)
     ti.root.dense(ti.i, n_hidden).place(bias1)
     ti.root.dense(ti.ij, (n_springs, n_hidden)).place(weights2)
@@ -159,24 +159,24 @@ def apply_spring_force(t: ti.i32):
         ti.atomic_add(v_inc[t + 1, b], impulse)
 
 
-@ti.kernel
-def apply_angle_spring_force(t: ti.i32):
-    # constraint between each spring with e to 90 degree
-    for i in range(n_angles):
-        a = angle_anchor_a[i]
-        b = angle_anchor_b[i]
-        c = angle_anchor_c[i]
-        pos_a = x[t, a]
-        pos_b = x[t, b]
-        pos_c = x[t, c]
-        dist_ac = pos_a - pos_c
-        dist_bc = pos_b - pos_c
-        angle = dist_ac.dot(dist_bc) / (dist_ac.norm() * dist_bc.norm() + 1e-4)
-        angle = ti.acos(angle)
-        angle_diff = angle - math.pi / 2
-        impulse = dt * angle_diff * angle_stiffness[i] * (pos_b - pos_a).normalized()
-        ti.atomic_add(v_inc[t + 1, a], impulse)
-        ti.atomic_add(v_inc[t + 1, b], -impulse)
+# @ti.kernel
+# def apply_angle_spring_force(t: ti.i32):
+#     # constraint between each spring with e to 90 degree
+#     for i in range(n_angles):
+#         a = angle_anchor_a[i]
+#         b = angle_anchor_b[i]
+#         c = angle_anchor_c[i]
+#         pos_a = x[t, a]
+#         pos_b = x[t, b]
+#         pos_c = x[t, c]
+#         dist_ac = pos_a - pos_c
+#         dist_bc = pos_b - pos_c
+#         angle = dist_ac.dot(dist_bc) / (dist_ac.norm() * dist_bc.norm() + 1e-4)
+#         angle = ti.math.acos(angle)
+#         angle_diff = angle - math.pi / 2
+#         impulse = dt * angle_diff * angle_stiffness[i] * (pos_b - pos_a).normalized()
+#         ti.atomic_add(v_inc[t + 1, a], impulse)
+#         ti.atomic_add(v_inc[t + 1, b], -impulse)
 
 
 use_toi = False
@@ -185,7 +185,7 @@ use_toi = False
 @ti.kernel
 def advance_toi(t: ti.i32):
     for i in range(n_objects):
-        s = math.exp(-dt * damping)
+        s = ti.math.exp(-dt * damping)
         old_v = s * v[t - 1, i] + dt * gravity * ti.Vector([0.0, 1.0]) + v_inc[t, i]
         old_x = x[t - 1, i]
         new_x = old_x + dt * old_v
@@ -329,10 +329,10 @@ def setup_robot(objects, springs, angle_springs):
 
     for i in range(n_angles):
         a = angle_springs[i]
-        angle_anchor_a[i] = a[0]
-        angle_anchor_b[i] = a[1]
-        angle_anchor_c[i] = a[2]
-        angle_anchor_c[i] = a[3]
+        # angle_anchor_a[i] = a[0]
+        # angle_anchor_b[i] = a[1]
+        # angle_anchor_c[i] = a[2]
+        # angle_anchor_c[i] = a[3]
 
 
 def optimize(toi, visualize):

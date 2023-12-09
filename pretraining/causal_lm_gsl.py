@@ -20,8 +20,6 @@ data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
 data = pickle.load(open("data/3x3-gsl-programs.pkl", "rb"))
 
 
-
-
 # split the data into train and test
 train = data[: int(0.8 * len(data))]
 test = data[int(0.8 * len(data)) :]
@@ -36,7 +34,7 @@ print("Finsihed tokenizing")
 train_encodings = [
     {
         "input_ids": train_encodings["input_ids"][i],
-        "attention_mask": train_encodings["attention_mask"][i]
+        "attention_mask": train_encodings["attention_mask"][i],
     }
     for i in range(len(train_encodings["input_ids"]))
 ]
@@ -44,11 +42,10 @@ train_encodings = [
 test_encodings = [
     {
         "input_ids": test_encodings["input_ids"][i],
-        "attention_mask": test_encodings["attention_mask"][i]
+        "attention_mask": test_encodings["attention_mask"][i],
     }
     for i in range(len(test_encodings["input_ids"]))
 ]
-
 
 
 training_args = TrainingArguments(

@@ -54,7 +54,7 @@ class AggregateModel(nn.Module):
             input_ids = self._tokenizer.batch_encode_plus(
                 ["def 00000\n" for _ in range(environment.shape[0])],
                 return_tensors="pt",
-                padding='max_length',
+                padding="max_length",
                 max_length=512,
             )
         input_ids = input_ids.to(environment.device)

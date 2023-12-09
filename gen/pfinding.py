@@ -104,5 +104,7 @@ if __name__ == "__main__":
             axs[i, j].imshow(envs[i * N + j])
             axs[i, j].axis("off")
     plt.savefig("gen/data/pfinding/no_paths_no_obstacles.pdf")
-    generate_all_programs("gen/data/pfinding/grids.npy", "gen/data/pfinding/programs.pkl")
+    generate_all_programs(
+        "gen/data/pfinding/grids.npy", "gen/data/pfinding/programs.pkl"
+    )
     # generate the gsl program for the last path

@@ -34,9 +34,11 @@ The resulting json file will be a list of dictionaries that follow the format:
 import sys
 import json
 import uuid
+from pathlib import Path
 
 
 class Robot:
+    name = -1
     def __init__(self, matrix, id_len=5):
         """Uses an nxn binary matrix to generate a robot.
         Define the bottom left corner of the matrix as 0,0 and the top-right corner
@@ -45,7 +47,7 @@ class Robot:
         self.objects = []
         self.springs = []
         self.angle_springs = []
-        self.name = uuid.uuid4().__str__()[:id_len]
+        Robot.name += 1
 
         n = len(matrix)
         for i in range(n):
@@ -131,26 +133,21 @@ class Robot:
 if __name__ == "__main__":
     if len(sys.argv) != 3:
         print(
-            "Usage: python generate_robot_config.py <path-to-json-file> <output-file-name>"
+            "Usage: python generate_robot_config.py <path-to-json-file> <output-dir>"
         )
         sys.exit(1)
 
     input_filename = sys.argv[1]
-    output_filename = sys.argv[2]
+    output_dir = sys.argv[2]
     robot_configs = []
 
     # load the input json file
     matrices = json.load(open(input_filename, "r"))
     for matrix in matrices:
         r = Robot(matrix)
-        print(r.name)
-        robot_configs.append(
-            {
-                # "name": r.name,
+        config = {
                 "objects": r.objects,
                 "springs": r.springs,
                 "angle_springs": r.angle_springs,
-            }
-        )
-
-    json.dump(robot_configs, open(output_filename, "w+"))
+        }
+        json.dump(config, open(Path(output_dir) / f"{r.name}.json", "w+"))
