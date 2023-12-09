@@ -205,13 +205,18 @@ def advance_toi(t: ti.i32):
                 # and old_v[1] < -1e-4
             ):
                 falling = True
-        #if falling: print("FALLLIGNIIGNGINIGNG")
+        # if falling: print("FALLLIGNIIGNGINIGNG")
         # now check if the point is actually on the ground
         if not falling and new_x[1] < ground_height and old_v[1] < -1e-4:
             toi = -(old_x[1] - ground_height) / old_v[1]
             new_v = ti.Vector([0.0, 0.0])
 
-        new_x = old_x + toi * old_v + (dt - toi) * new_v + ti.Vector([0.0, 1.0]) * falling * gravity * dt**2
+        new_x = (
+            old_x
+            + toi * old_v
+            + (dt - toi) * new_v
+            + ti.Vector([0.0, 1.0]) * falling * gravity * dt**2
+        )
 
         v[t, i] = new_v
         x[t, i] = new_x
@@ -245,7 +250,7 @@ def advance_no_toi(t: ti.i32):
 
 @ti.kernel
 def compute_loss(t: ti.i32):
-    loss[None] = ti.math.clamp((goal[None]-x[t,head_id]).norm(),0,3)
+    loss[None] = ti.math.clamp((goal[None] - x[t, head_id]).norm(), 0, 3)
 
 
 gui = ti.GUI("Mass Spring Robot", (512, 512), background_color=0xFFFFFF)
@@ -350,7 +355,9 @@ def setup_robot(objects, springs, angle_springs):
     n_angles = len(angle_springs)
     allocate_fields()
 
-    print(f"n_objects={n_objects}, n_springs={n_springs}, n_angles={n_angles}, gaps={options.gaps}")
+    print(
+        f"n_objects={n_objects}, n_springs={n_springs}, n_angles={n_angles}, gaps={options.gaps}"
+    )
     print(f"gap-starts={options.gap_starts}, gap-widths={options.gap_widths}")
 
     for i in range(n_objects):
@@ -370,7 +377,7 @@ def setup_robot(objects, springs, angle_springs):
         angle_anchor_b[i] = a[1]
         angle_anchor_c[i] = a[2]
         angle_stiffness[i] = a[3]
-    
+
     for i in range(options.gaps):
         gap_starts[i] = options.gap_starts[i]
         gap_widths[i] = options.gap_widths[i]

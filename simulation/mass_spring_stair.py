@@ -52,6 +52,8 @@ spring_anchor_b = ti.field(ti.i32)
 spring_length = scalar()
 spring_stiffness = scalar()
 spring_actuation = scalar()
+stair_heights = scalar()
+stair_widths = scalar()
 
 n_sin_waves = 10
 weights1 = scalar()
@@ -81,6 +83,7 @@ def allocate_fields():
     ti.root.dense(ti.i, n_angles).place(
         angle_anchor_a, angle_anchor_b, angle_anchor_c, angle_stiffness
     )
+    ti.root.dense(ti.i, options.stairs).place(stair_heights, stair_widths)
     ti.root.dense(ti.ij, (n_hidden, n_input_states())).place(weights1)
     ti.root.dense(ti.i, n_hidden).place(bias1)
     ti.root.dense(ti.ij, (n_springs, n_hidden)).place(weights2)
@@ -191,11 +194,20 @@ def advance_toi(t: ti.i32):
         new_x = old_x + dt * old_v
         toi = 0.0
         new_v = old_v
-        if new_x[1] < ground_height and old_v[1] < -1e-4:
-            toi = -(old_x[1] - ground_height) / old_v[1]
-            new_v = ti.Vector([0.0, 0.0])
+        prev = 0.0
+        for stair in range(options.stairs):
+            stair_start = prev
+            stair_end = prev + stair_widths[stair]
+            if (
+                stair_start <= old_x[0] < stair_end
+                and new_x[1] < stair_heights[stair]
+                and old_v[1] < -1e-4
+            ):
+                toi = -(old_x[1] - stair_heights[stair]) / old_v[1]
+                new_v = ti.Vector([0.0, 0.0])
+                #new_v[0] = 0.5 * old_v[0]
+            prev += stair_widths[stair]
         new_x = old_x + toi * old_v + (dt - toi) * new_v
-
         v[t, i] = new_v
         x[t, i] = new_x
 
@@ -207,11 +219,21 @@ def advance_no_toi(t: ti.i32):
         old_v = s * v[t - 1, i] + dt * gravity * ti.Vector([0.0, 1.0]) + v_inc[t, i]
         old_x = x[t - 1, i]
         new_v = old_v
-        depth = old_x[1] - ground_height
-        if depth < 0 and new_v[1] < 0:
-            # friction projection
-            new_v[0] = 0
-            new_v[1] = 0
+        # depth = old_x[1] - ground_height
+        prev = 0.0
+        for stair in range(options.stairs):
+            x_start = prev
+            x_end = prev + stair_widths[stair]
+            if (
+                old_x[0] < x_end
+                and old_x[0] > x_start
+                and old_x[1] < stair_heights[stair]
+                and new_v[1] < 0
+            ):
+                # friction projection
+                new_v[0] *= 0.5
+                new_v[1] = 0
+            prev += stair_widths[stair]
         new_x = old_x + dt * new_v
         v[t, i] = new_v
         x[t, i] = new_x
@@ -219,18 +241,15 @@ def advance_no_toi(t: ti.i32):
 
 @ti.kernel
 def compute_loss(t: ti.i32):
-    loss[None] = -x[t, head_id][0]
+    # loss[None] = -x[t,head_id][0]
+    loss[None] = (goal[None] - x[t, head_id]).norm()
 
 
 gui = ti.GUI("Mass Spring Robot", (512, 512), background_color=0xFFFFFF)
 
 
 def forward(output=None, visualize=True):
-    if random.random() > 0.5:
-        goal[None] = [0.9, 0.2]
-    else:
-        goal[None] = [0.1, 0.2]
-    goal[None] = [0.9, 0.2]
+    goal[None] = options.goal
 
     interval = vis_interval
     if output:
@@ -251,9 +270,13 @@ def forward(output=None, visualize=True):
             advance_no_toi(t)
 
         if (t + 1) % interval == 0 and visualize:
-            gui.line(
-                begin=(0, ground_height), end=(1, ground_height), color=0x0, radius=3
-            )
+            # draw the stairs
+            prev = 0
+            for i in range(options.stairs):
+                begin = (prev, options.stair_heights[i])
+                end = (prev + options.stair_widths[i], options.stair_heights[i])
+                gui.line(begin=begin, end=end, color=(0x0), radius=3)
+                prev += options.stair_widths[i]
 
             def circle(x, y, color):
                 gui.circle((x, y), ti.rgb_to_hex(color), 7)
@@ -283,7 +306,7 @@ def forward(output=None, visualize=True):
                 if i == head_id:
                     color = (0.8, 0.2, 0.3)
                 circle(x[t, i][0], x[t, i][1], color)
-            # circle(goal[None][0], goal[None][1], (0.6, 0.2, 0.2))
+            circle(goal[None][0], goal[None][1], (0.6, 0.2, 0.2))
 
             if output:
                 gui.show("mass_spring/{}/{:04d}.png".format(output, t))
@@ -313,6 +336,9 @@ def setup_robot(objects, springs, angle_springs):
     allocate_fields()
 
     print(f"n_objects={n_objects},n_springs={n_springs},n_angles={n_angles}")
+    print(
+        f"stairs={options.stairs},stair_widths={options.stair_widths},stair_heights={options.stair_heights}"
+    )
 
     for i in range(n_objects):
         x[0, i] = objects[i]
@@ -331,6 +357,10 @@ def setup_robot(objects, springs, angle_springs):
         angle_anchor_b[i] = a[1]
         angle_anchor_c[i] = a[2]
         angle_stiffness[i] = a[3]
+
+    for i in range(options.stairs):
+        stair_heights[i] = options.stair_heights[i]
+        stair_widths[i] = options.stair_widths[i]
 
 
 def optimize(toi, visualize):
@@ -392,7 +422,23 @@ def optimize(toi, visualize):
 parser = argparse.ArgumentParser()
 parser.add_argument("fname", type=str, help="config filename")
 parser.add_argument("task", type=str, help="train/plot")
-parser.add_argument("--iters", type=int, default=5)
+parser.add_argument("-stairs", type=int, help="the number of stairs in the environment")
+parser.add_argument(
+    "-stair-widths",
+    nargs="+",
+    type=float,
+    help="width of the stairs, num. arguments must match -stairs",
+)
+parser.add_argument(
+    "-stair-heights",
+    nargs="+",
+    type=float,
+    help="heights of the stairs, num. arguments must match -stairs",
+)
+parser.add_argument(
+    "-goal", type=float, nargs=2, help="x,y coordinate of the goal", default=[0.9, 0.2]
+)
+parser.add_argument("--iters", type=int, default=50)
 options = parser.parse_args()
 
 
