@@ -1,12 +1,14 @@
+import json
 import argparse
 import random
-import sys
 import matplotlib.pyplot as plt
 import taichi as ti
 import math
 import numpy as np
 import os
 
+random.seed(0)
+np.random.seed(0)
 
 real = ti.f32
 ti.init(default_fp=real)
@@ -14,7 +16,7 @@ ti.init(default_fp=real)
 max_steps = 4096
 vis_interval = 256
 output_vis_interval = 8
-steps = 2048 // 2
+steps = 2048 // 3
 assert steps * 2 <= max_steps
 
 scalar = lambda: ti.field(dtype=real)
@@ -30,7 +32,6 @@ head_id = 0
 goal = vec()
 
 n_objects = 0
-# target_ball = 0
 elasticity = 0.0
 ground_height = 0.1
 gravity = -4.8
@@ -41,6 +42,11 @@ spring_omega = 10
 damping = 15
 
 n_springs = 0
+n_angles = 0
+angle_anchor_a = ti.field(ti.i32)
+angle_anchor_b = ti.field(ti.i32)
+angle_anchor_c = ti.field(ti.i32)
+angle_stiffness = scalar()
 spring_anchor_a = ti.field(ti.i32)
 spring_anchor_b = ti.field(ti.i32)
 spring_length = scalar()
@@ -55,9 +61,7 @@ n_hidden = 32
 weights2 = scalar()
 bias2 = scalar()
 hidden = scalar()
-
 center = vec()
-
 act = scalar()
 
 
@@ -66,26 +70,26 @@ def n_input_states():
 
 
 def allocate_fields():
-    if hasattr(allocate_fields, "run"):
-        return
-    ti.root.dense(ti.i, max_steps).dense(ti.j, 45).place(x, v, v_inc)
-    ti.root.dense(ti.i, 72).place(
+    ti.root.dense(ti.i, max_steps).dense(ti.j, n_objects).place(x, v, v_inc)
+    ti.root.dense(ti.i, n_springs).place(
         spring_anchor_a,
         spring_anchor_b,
         spring_length,
         spring_stiffness,
         spring_actuation,
     )
+    ti.root.dense(ti.i, n_angles).place(
+        angle_anchor_a, angle_anchor_b, angle_anchor_c, angle_stiffness
+    )
     ti.root.dense(ti.ij, (n_hidden, n_input_states())).place(weights1)
     ti.root.dense(ti.i, n_hidden).place(bias1)
-    ti.root.dense(ti.ij, (72, n_hidden)).place(weights2)
-    ti.root.dense(ti.i, 72).place(bias2)
+    ti.root.dense(ti.ij, (n_springs, n_hidden)).place(weights2)
+    ti.root.dense(ti.i, n_springs).place(bias2)
     ti.root.dense(ti.ij, (max_steps, n_hidden)).place(hidden)
-    ti.root.dense(ti.ij, (max_steps, 72)).place(act)
+    ti.root.dense(ti.ij, (max_steps, n_springs)).place(act)
     ti.root.dense(ti.i, max_steps).place(center)
     ti.root.place(loss, goal)
     ti.root.lazy_grad()
-    allocate_fields.run = True
 
 
 dt = 0.004
@@ -146,13 +150,33 @@ def apply_spring_force(t: ti.i32):
         pos_a = x[t, a]
         pos_b = x[t, b]
         dist = pos_a - pos_b
-        length = dist.norm() + 0.01
+        length = dist.norm() + 1e-4
 
         target_length = spring_length[i] * (1.0 + spring_actuation[i] * act[t, i])
         impulse = dt * (length - target_length) * spring_stiffness[i] / length * dist
 
-        v_inc[t + 1, a] += -impulse
-        v_inc[t + 1, b] += impulse
+        ti.atomic_add(v_inc[t + 1, a], -impulse)
+        ti.atomic_add(v_inc[t + 1, b], impulse)
+
+
+@ti.kernel
+def apply_angle_spring_force(t: ti.i32):
+    # constraint between each spring with e to 90 degree
+    for i in range(n_angles):
+        a = angle_anchor_a[i]
+        b = angle_anchor_b[i]
+        c = angle_anchor_c[i]
+        pos_a = x[t, a]
+        pos_b = x[t, b]
+        pos_c = x[t, c]
+        dist_ac = pos_a - pos_c
+        dist_bc = pos_b - pos_c
+        angle = dist_ac.dot(dist_bc) / (dist_ac.norm() * dist_bc.norm() + 1e-4)
+        angle = ti.acos(angle)
+        angle_diff = angle - math.pi / 2
+        impulse = dt * angle_diff * angle_stiffness[i] * (pos_b - pos_a).normalized()
+        ti.atomic_add(v_inc[t + 1, a], impulse)
+        ti.atomic_add(v_inc[t + 1, b], -impulse)
 
 
 use_toi = False
@@ -198,10 +222,10 @@ def compute_loss(t: ti.i32):
     loss[None] = -x[t, head_id][0]
 
 
-gui = None  # ti.GUI("Mass Spring Robot", (512, 512), background_color=0xFFFFFF)
+gui = ti.GUI("Mass Spring Robot", (512, 512), background_color=0xFFFFFF)
 
 
-def forward(output=None, visualize=True, test=False):
+def forward(output=None, visualize=True):
     if random.random() > 0.5:
         goal[None] = [0.9, 0.2]
     else:
@@ -213,18 +237,14 @@ def forward(output=None, visualize=True, test=False):
         interval = output_vis_interval
         os.makedirs("mass_spring/{}/".format(output), exist_ok=True)
 
-    total_steps = steps if not test else 600
+    total_steps = steps if not output else steps * 2
 
     for t in range(1, total_steps):
         compute_center(t - 1)
-        # print(center[t - 1])
-        compute_loss(t - 1)
-        # print('head velocity at ', t-1, v[t-1, head_id][0])
-        # print('loss at ', t-1, loss[None])
-        # print('act at ', t-1, [act[t-1,i] for i in range(n_springs)])
         nn1(t - 1)
         nn2(t - 1)
         apply_spring_force(t - 1)
+        # apply_angle_spring_force(t - 1)
         if use_toi:
             advance_toi(t)
         else:
@@ -266,7 +286,7 @@ def forward(output=None, visualize=True, test=False):
             # circle(goal[None][0], goal[None][1], (0.6, 0.2, 0.2))
 
             if output:
-                gui.show("mass_spring/{:04d}.png".format(output, t))
+                gui.show("mass_spring/{}/{:04d}.png".format(output, t))
             else:
                 gui.show()
 
@@ -285,13 +305,16 @@ def clear():
     clear_states()
 
 
-def setup_robot(objects, springs):
-    global n_objects, n_springs
+def setup_robot(objects, springs, angle_springs):
+    global n_objects, n_springs, n_angles
     n_objects = len(objects)
     n_springs = len(springs)
+    n_angles = len(angle_springs)
     allocate_fields()
 
-    # print('n_objects=', n_objects, '   n_springs=', n_springs)
+    print(
+        f"n_objects={n_objects},n_springs={n_springs},n_angles={n_angles}"
+    )
 
     for i in range(n_objects):
         x[0, i] = objects[i]
@@ -304,11 +327,17 @@ def setup_robot(objects, springs):
         spring_stiffness[i] = s[3]
         spring_actuation[i] = s[4]
 
+    for i in range(n_angles):
+        a = angle_springs[i]
+        angle_anchor_a[i] = a[0]
+        angle_anchor_b[i] = a[1]
+        angle_anchor_c[i] = a[2]
+        angle_anchor_c[i] = a[3]
+
 
 def optimize(toi, visualize):
     global use_toi
     use_toi = toi
-    np.random.seed(1)
     for i in range(n_hidden):
         for j in range(n_input_states()):
             weights1[i, j] = (
@@ -324,14 +353,13 @@ def optimize(toi, visualize):
 
     losses = []
     # forward('initial{}'.format(robot_id), visualize=visualize)
-    for iter in range(100):
-        # print(iter)
+    for iter in range(options.iters):
         clear()
         # with ti.ad.Tape(loss) automatically clears all gradients
         with ti.ad.Tape(loss):
             forward(visualize=visualize)
 
-        # print('Iter=', iter, 'Loss=', loss[None])
+        print("Iter=", iter, "Loss=", loss[None])
 
         total_norm_sqr = 0
         for i in range(n_hidden):
@@ -343,6 +371,8 @@ def optimize(toi, visualize):
             for j in range(n_hidden):
                 total_norm_sqr += weights2.grad[i, j] ** 2
             total_norm_sqr += bias2.grad[i] ** 2
+
+        print(total_norm_sqr)
 
         # scale = learning_rate * min(1.0, gradient_clip / total_norm_sqr ** 0.5)
         gradient_clip = 0.2
@@ -361,12 +391,36 @@ def optimize(toi, visualize):
     return losses
 
 
-def main(r):
-    allocate_fields()
-    setup_robot(r.objects, r.springs)
-    print(n_objects, n_springs)
-    optimize(toi=True, visualize=False)
-    clear()
-    forward(output=True, visualize=False, test=True)
-    clear()
-    return loss[None]
+parser = argparse.ArgumentParser()
+parser.add_argument("robots", type=str, help="robot config filename")
+parser.add_argument("task", type=str, help="train/plot")
+parser.add_argument("--iters", type=int, default=100)
+options = parser.parse_args()
+
+
+def main():
+
+    setup_robot(**json.load(open(options.robots))[0])
+
+    if options.task == "plot":
+        ret = {}
+        for toi in [False, True]:
+            ret[toi] = []
+            for i in range(5):
+                losses = optimize(toi=toi, visualize=False)
+                # losses = gaussian_filter(losses, sigma=3)
+                plt.plot(losses, "g" if toi else "r")
+                ret[toi].append(losses)
+
+        import pickle
+
+        pickle.dump(ret, open("losses.pkl", "wb"))
+        print("Losses saved to losses.pkl")
+    else:
+        optimize(toi=True, visualize=True)
+        clear()
+        forward("final{}".format(options.robot_id))
+
+
+if __name__ == "__main__":
+    main()

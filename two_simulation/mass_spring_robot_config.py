@@ -1,8 +1,6 @@
-from mass_spring import main
-from collections import namedtuple
-
 objects = []
 springs = []
+angle_springs = []
 
 
 def add_object(x):
@@ -11,11 +9,15 @@ def add_object(x):
 
 
 def add_spring(a, b, length=None, stiffness=1, actuation=0.1):
-    if length is None:
+    if length == None:
         length = (
             (objects[a][0] - objects[b][0]) ** 2 + (objects[a][1] - objects[b][1]) ** 2
         ) ** 0.5
     springs.append([a, b, length, stiffness, actuation])
+
+
+def add_angle_spring(a, b, c, stiffness=1):
+    angle_springs.append([a, b, c, stiffness])
 
 
 def robotA():
@@ -96,15 +98,13 @@ def add_mesh_triangle(i, j, actuation=0.0):
 
 
 def robotB():
-    add_mesh_square(0, 0, actuation=0.15)
+    add_mesh_triangle(2, 0, actuation=0.15)
+    add_mesh_triangle(0, 0, actuation=0.15)
     add_mesh_square(0, 1, actuation=0.15)
-    add_mesh_square(0, 2, actuation=0.15)
-    add_mesh_square(1, 0, actuation=0.15)
-    add_mesh_square(1, 1, actuation=0.15)
-    add_mesh_square(1, 2, actuation=0.15)
-    add_mesh_square(2, 0, actuation=0.15)
+    add_mesh_square(0, 2)
+    add_mesh_square(1, 2)
     add_mesh_square(2, 1, actuation=0.15)
-    add_mesh_square(2, 2, actuation=0.15)
+    add_mesh_square(2, 2)
     # add_mesh_square(2, 3)
     # add_mesh_square(2, 4)
 
@@ -112,8 +112,10 @@ def robotB():
 
 
 def robotC():
+    add_mesh_square(2, 0, actuation=0.15)
     add_mesh_square(0, 0, actuation=0.15)
     add_mesh_square(0, 1, actuation=0.15)
+    add_mesh_square(0, 2)
     add_mesh_square(1, 2)
     add_mesh_square(2, 1, actuation=0.15)
     add_mesh_square(2, 2)
@@ -140,13 +142,4 @@ def robotD():
     return objects, springs
 
 
-if __name__ == "__main__":
-    r = robotB()
-
-    class A:
-        pass
-
-    g = A()
-    g.objects = r[0]
-    g.springs = r[1]
-    main(g)
+robots = [robotA, robotB, robotC, robotD]
