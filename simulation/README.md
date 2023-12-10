@@ -43,4 +43,5 @@ Below are the changes in the actual code that I made to achieve these for refere
 | Staircase |  - Added three arguments to the script `stairs`, `stair_widths`, and `stair_heights`. They represent the total number of stairs, the width of each stairs (a number between 0-1), and the height of each stairs.<br>-Modified `advance_toi` and `advance_no_toi` according to Matthew's documentation for each object.<br>**Existing Issues:**<br>Numerical instability when the robot reaches the end of one stair and the start of another stair. Not too sure what is happening here.|
 
 Some current issues that need to be resolved:
-1. 
+1. Numerical instability of simulation with gaps.
+2. Numerical instability of simulation with stairs.
