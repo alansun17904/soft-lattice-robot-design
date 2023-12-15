@@ -195,28 +195,27 @@ def advance_toi(t: ti.i32):
         toi = 0.0
         new_v = old_v
         # check the boundary conditions for not in the gaps
-        falling = False
+        
         for gap in range(options.gaps):
-            if (
-                # new_x[1] < ground_height
-                old_x[0] > gap_starts[gap]
-                and (old_x[0] < gap_starts[gap] + gap_widths[gap])
-                # and old_x[1] > ground_height
-                # and old_v[1] < -1e-4
-            ):
-                falling = True
-        # if falling: print("FALLLIGNIIGNGINIGNG")
-        # now check if the point is actually on the ground
-        if not falling and new_x[1] < ground_height and old_v[1] < -1e-4:
-            toi = -(old_x[1] - ground_height) / old_v[1]
-            new_v = ti.Vector([0.0, 0.0])
+            if new_x[1] < ground_height and old_v[1] < 0 and old_x[1] > ground_height and gap_starts[gap] > old_x[0] and gap == 0:
+                toi = -(old_x[1] - ground_height) / old_v[1] -dt/10
+                new_v[0] *= 0.5
+                new_v[1] = 0.0
+            
+            elif new_x[1] < ground_height and old_v[1] < 0 and old_x[1] > ground_height and gap_starts[gap] + gap_widths[gap] < old_x[0] < gap_starts[gap + 1] and gap < options.gaps - 1:
+                toi = -(old_x[1] - ground_height) / old_v[1] -dt/10
+                new_v[0] *= 0.5
+                new_v[1] = 0.0
+
+            elif new_x[1] < ground_height and old_v[1] < 0 and old_x[1] > ground_height and gap_starts[gap] + gap_widths[gap] < old_x[0] and gap == options.gaps - 1:
+                toi = -(old_x[1] - ground_height) / old_v[1] - dt/10
+                new_v[0] *= 0.5
+                new_v[1] = 0.0
 
         new_x = (
             old_x
             + toi * old_v
-            + (dt - toi) * new_v
-            + ti.Vector([0.0, 1.0]) * falling * gravity * dt**2
-        )
+            + (dt - toi) * new_v)
 
         v[t, i] = new_v
         x[t, i] = new_x
@@ -229,11 +228,13 @@ def advance_no_toi(t: ti.i32):
         old_v = s * v[t - 1, i] + dt * gravity * ti.Vector([0.0, 1.0]) + v_inc[t, i]
         old_x = x[t - 1, i]
         new_v = old_v
-        depth = old_x[1] - ground_height
-        if depth < 0 and new_v[1] < 0:
+        new_x = old_x + dt * old_v
+        depth = new_x[1] - ground_height
+        if depth <= 0 and new_v[1] < 0: # and old_x[1] > ground_height:
             # friction projection
-            new_v[0] = 0
-            new_v[1] = 0
+            new_v[0] *= 0.5
+            new_v[1] = 0.0
+        
         for gap in range(options.gaps):
             if (
                 depth < 0
