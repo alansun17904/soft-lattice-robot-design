@@ -199,9 +199,10 @@ def advance_toi(t: ti.i32):
             stair_start = prev
             stair_end = prev + stair_widths[stair]
             if (
-                stair_start <= old_x[0] < stair_end
+                stair_start < old_x[0] < stair_end
                 and new_x[1] < stair_heights[stair]
-                and old_v[1] < -1e-4
+                and old_v[1] < 0
+                and old_x[1] >= stair_heights[stair]
             ):
                 toi = -(old_x[1] - stair_heights[stair]) / old_v[1]
                 new_v = ti.Vector([0.0, 0.0])
