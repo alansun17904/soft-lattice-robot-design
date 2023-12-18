@@ -1,4 +1,4 @@
-""""
+"""
 Given a list of square, binary matrices. This script converts a json file that represents
 robots readable by difftaichi. It is required that for any nxn matrix it must be that
 the 1 entries are adjacent. 
