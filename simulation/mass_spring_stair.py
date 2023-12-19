@@ -206,7 +206,7 @@ def advance_toi(t: ti.i32):
             ):
                 toi = -(old_x[1] - stair_heights[stair]) / old_v[1]
                 new_v = ti.Vector([0.0, 0.0])
-                #new_v[0] = 0.5 * old_v[0]
+                # new_v[0] = 0.5 * old_v[0]
             prev += stair_widths[stair]
         new_x = old_x + toi * old_v + (dt - toi) * new_v
         v[t, i] = new_v

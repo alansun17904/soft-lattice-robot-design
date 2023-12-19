@@ -195,27 +195,42 @@ def advance_toi(t: ti.i32):
         toi = 0.0
         new_v = old_v
         # check the boundary conditions for not in the gaps
-        
+
         for gap in range(options.gaps):
-            if new_x[1] < ground_height and old_v[1] < 0 and old_x[1] > ground_height and gap_starts[gap] > old_x[0] and gap == 0:
-                toi = -(old_x[1] - ground_height) / old_v[1] -dt/10
-                new_v[0] *= 0.5
-                new_v[1] = 0.0
-            
-            elif new_x[1] < ground_height and old_v[1] < 0 and old_x[1] > ground_height and gap_starts[gap] + gap_widths[gap] < old_x[0] < gap_starts[gap + 1] and gap < options.gaps - 1:
-                toi = -(old_x[1] - ground_height) / old_v[1] -dt/10
-                new_v[0] *= 0.5
-                new_v[1] = 0.0
-
-            elif new_x[1] < ground_height and old_v[1] < 0 and old_x[1] > ground_height and gap_starts[gap] + gap_widths[gap] < old_x[0] and gap == options.gaps - 1:
-                toi = -(old_x[1] - ground_height) / old_v[1] - dt/10
+            if (
+                new_x[1] < ground_height
+                and old_v[1] < 0
+                and old_x[1] > ground_height
+                and gap_starts[gap] > old_x[0]
+                and gap == 0
+            ):
+                toi = -(old_x[1] - ground_height) / old_v[1] - dt / 10
                 new_v[0] *= 0.5
                 new_v[1] = 0.0
 
-        new_x = (
-            old_x
-            + toi * old_v
-            + (dt - toi) * new_v)
+            elif (
+                new_x[1] < ground_height
+                and old_v[1] < 0
+                and old_x[1] > ground_height
+                and gap_starts[gap] + gap_widths[gap] < old_x[0] < gap_starts[gap + 1]
+                and gap < options.gaps - 1
+            ):
+                toi = -(old_x[1] - ground_height) / old_v[1] - dt / 10
+                new_v[0] *= 0.5
+                new_v[1] = 0.0
+
+            elif (
+                new_x[1] < ground_height
+                and old_v[1] < 0
+                and old_x[1] > ground_height
+                and gap_starts[gap] + gap_widths[gap] < old_x[0]
+                and gap == options.gaps - 1
+            ):
+                toi = -(old_x[1] - ground_height) / old_v[1] - dt / 10
+                new_v[0] *= 0.5
+                new_v[1] = 0.0
+
+        new_x = old_x + toi * old_v + (dt - toi) * new_v
 
         v[t, i] = new_v
         x[t, i] = new_x
@@ -230,11 +245,11 @@ def advance_no_toi(t: ti.i32):
         new_v = old_v
         new_x = old_x + dt * old_v
         depth = new_x[1] - ground_height
-        if depth <= 0 and new_v[1] < 0: # and old_x[1] > ground_height:
+        if depth <= 0 and new_v[1] < 0:  # and old_x[1] > ground_height:
             # friction projection
             new_v[0] *= 0.5
             new_v[1] = 0.0
-        
+
         for gap in range(options.gaps):
             if (
                 depth < 0
