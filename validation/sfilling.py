@@ -11,7 +11,7 @@ def gen_space_filling(environment: np.array, start: Tuple[int], n: int) -> List[
     return programs
 
 
-def get_visit_sequence(environment: np.array, start_coor):
+def get_visit_sequence(environment: np.array, start_coor, rewards=None):
     """
     Given the environment, get a random sequence of points that
     visits all of the interior points of the environment.
@@ -32,7 +32,8 @@ def get_visit_sequence(environment: np.array, start_coor):
                 min(max(0, end[1] + dy), environment.shape[1] - 1),
             )
             if cgrid[i, j] == 0:
-                queue.append(((end[0], end[1]), (i, j)))
+                if rewards is not None and rewards[i,j] >= 0:
+                    queue.append(((end[0], end[1]), (i, j)))
     return seq
 
 
