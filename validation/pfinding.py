@@ -108,7 +108,7 @@ if __name__ == "__main__":
     )
     options = parser.parse_args()
 
-    envs = np.load(f"{Path(options.dir) / Path(options.grids_file)}")
+    envs = np.load(Path(options.dir) / Path(options.grids_file))
     # visualize 25 paths just to make sure that this is right
     fig, axs = plt.subplots(5, 5, figsize=(10, 10))
     for i in range(5):

@@ -1,13 +1,13 @@
 # Soft-Lattice Robot 2D Simulations
 This directory handles all of the simulations for the soft-lattice robots which can either be used for inference and validation of the trained language models or it can be used to generate expert demonstrations for the language models. Here is the general workflow:
 
-0. Generate all robots (i.e. all valid binary matrices). Run the following:
+1. Generate all robots (i.e. all valid binary matrices). Run the following:
 ```bash
 python3 generate_all_robots.py <n> <m>
 ```
 Here, `<n>` corresponds to the maximum number of blocks that can be used and `<m>` refers to the size of the binary matrix (i.e. the size of the constrained environment). It must be that `n <= m**2`, otherwise the script will throw an error.
 
-1. Generate the soft-lattice robot designs and format them into `NxN` binary matrices where 1 denotes that there should be a robot mini there and 0 denotes the absence of a robot mini. Format all of these matrices into a `json` file as a list of `NxN` binary matrices.
+<!-- 1. Generate the soft-lattice robot designs and format them into `NxN` binary matrices where 1 denotes that there should be a robot mini there and 0 denotes the absence of a robot mini. Format all of these matrices into a `json` file as a list of `NxN` binary matrices. -->
 
 2. Using this json (as a blueprint), generate the configurations of the robots as they are to be built in `difftaichi`. To do this simply run the Python script:
 ```bash
