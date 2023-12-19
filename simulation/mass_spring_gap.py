@@ -458,6 +458,7 @@ def optimize(toi, visualize):
 parser = argparse.ArgumentParser()
 parser.add_argument("fname", type=str, help="config filename")
 parser.add_argument("task", type=str, help="train/plot")
+parser.add_argument("losses_fname", type=str, help="losses filename")
 parser.add_argument("-gaps", type=int, help="the number of gaps in the environment")
 parser.add_argument(
     "-gap-starts",
@@ -480,7 +481,7 @@ def main():
 
     if options.task == "plot":
         losses = optimize(toi=True, visualize=False)
-        with open("losses.json", "a+") as f:
+        with open(options.losses_fname, "a+") as f:
             f.write('{"' + f"{options.fname}" + '"' + f":{losses}" + "}" + "\n")
     else:
         optimize(toi=True, visualize=True)
