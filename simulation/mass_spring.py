@@ -392,7 +392,7 @@ def optimize(toi, visualize):
 parser = argparse.ArgumentParser()
 parser.add_argument("fname", type=str, help="config filename")
 parser.add_argument("task", type=str, help="train/plot")
-parser.add_argument("--iters", type=int, default=5)
+parser.add_argument("--iters", type=int, default=20)
 options = parser.parse_args()
 
 

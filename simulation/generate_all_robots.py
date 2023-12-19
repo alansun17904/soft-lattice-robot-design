@@ -106,5 +106,5 @@ if __name__ == "__main__":
         for robot in size:
             all_robots.append(robot.make_robot().astype(int).tolist())
             print(robot)
-    print(all_robots)
+    print(f"Total robots generated: {len(all_robots)}")
     json.dump(all_robots, open(options.output_file, "w+"))
