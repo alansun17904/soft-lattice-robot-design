@@ -165,7 +165,7 @@ def main():
             line_dict = json.loads(line)
             name, loss = (
                 int(re.search("(\d+).json", list(line_dict.keys())[0]).group(1)),
-                list(line_dict.values())[0][-1]
+                list(line_dict.values())[0][-1],
             )
             losses.append((name, loss))
     losses.sort(key=lambda x: x[0])

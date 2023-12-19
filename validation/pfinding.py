@@ -1,5 +1,6 @@
 import tqdm
 import pickle
+import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -48,21 +49,30 @@ def gen_shortest_path(grid):
     return path[::-1]
 
 
-def generate_gsl_program(path):
-    """Generate a gsl program from a path, we assume that the path is valid
-    and that the first block `def 0` is the first block in the path.
+def generate_gsl_program(seq):
     """
-    if len(path) == 1:
-        return "def 00000"
-    program = []
-    vars = {node: f"{i:05d}" for i, node in enumerate(path)}
-    program.extend([f"def {vars[node]}" for node in path])
-    for i in range(1, len(path)):
-        start_coor = path[i - 1]
-        end_coor = path[i]
-        direction = get_direction(start_coor, end_coor)
-        program.append(f"add {vars[start_coor]} {vars[end_coor]} {direction}")
+    Given a sequence of points, generate the GSL program that will capture the
+    semantics of that sequence.
+    """
+    block_names = {seq[0]: 0}
+    program = [
+        "def 0",
+    ]
+    for i in range(1, len(seq)):
+        prev_coor, next_coor = seq[i-1], seq[i]
+        # assumed that the previous coordinate must be in the dictionary
+        # otherwise this is not a valid generation, so find the name of the next_coor
+        if next_coor in block_names.keys() or prev_coor not in block_names.keys():
+            assert RuntimeError("Sequence of block generations is invalid.")
+        block_names[next_coor] = i
+        program.extend([f"def {i}"])
+
+        direction = get_direction(prev_coor, next_coor)
+        program.append(
+            f"add {block_names[prev_coor]} {block_names[next_coor]} {direction}"
+        )
     return "\n".join(program)
+
 
 
 def get_direction(start, end):

@@ -9,17 +9,23 @@ from transformers import Trainer, TrainingArguments
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("programs_file", type=str, help="file path of all of the program texts")
+parser.add_argument(
+    "programs_file", type=str, help="file path of all of the program texts"
+)
 parser.add_argument("pretrain_model_name", type=str, help="pretraining model name")
-parser.add_argument("output_directory", type=str, help="output directory for model checkpoints")
+parser.add_argument(
+    "output_directory", type=str, help="output directory for model checkpoints"
+)
 parser.add_argument("-epochs", type=int, default=3)
 options = parser.parse_args()
 
 HUB_TOKEN = os.environ.get("HUB_TOKEN")
 if HUB_TOKEN is None:
-    print("HuggingFace read/write access token is not set. \
+    print(
+        "HuggingFace read/write access token is not set. \
           Please set the environmental variable HUB_TOKEN, \
-          by running `export HUB_TOKEN=<hub-token>`")
+          by running `export HUB_TOKEN=<hub-token>`"
+    )
     sys.exit(1)
 
 tokenizer = BartTokenizer.from_pretrained("facebook/bart-large")

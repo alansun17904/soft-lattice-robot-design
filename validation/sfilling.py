@@ -41,14 +41,23 @@ def generate_gsl_program(seq):
     Given a sequence of points, generate the GSL program that will capture the
     semantics of that sequence.
     """
-    program = []
-    vars = {coor[1]: f"{i:05d}" for i, coor in enumerate(seq)}
-    program.extend([f"def {k}" for k in vars.values()])
-    for act in seq[1:]:
-        start_coor = act[0]
-        end_coor = act[1]
-        direction = get_direction(start_coor, end_coor)
-        program.append(f"add {vars[start_coor]} {vars[end_coor]} {direction}")
+    block_names = {seq[0][0]: 0}
+    program = [
+        "def 0",
+    ]
+    for i in range(1, len(seq)):
+        prev_coor, next_coor = seq[i]
+        # assumed that the previous coordinate must be in the dictionary
+        # otherwise this is not a valid generation, so find the name of the next_coor
+        if next_coor in block_names.keys() or prev_coor not in block_names.keys():
+            assert RuntimeError("Sequence of block generations is invalid.")
+        block_names[next_coor] = i
+        program.extend([f"def {i}"])
+
+        direction = get_direction(prev_coor, next_coor)
+        program.append(
+            f"add {block_names[prev_coor]} {block_names[next_coor]} {direction}"
+        )
     return "\n".join(program)
 
 
