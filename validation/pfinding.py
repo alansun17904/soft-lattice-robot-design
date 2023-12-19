@@ -1,7 +1,8 @@
 import tqdm
-import pickle
+import json
 import argparse
 import numpy as np
+from pathlib import Path
 import matplotlib.pyplot as plt
 
 
@@ -59,7 +60,7 @@ def generate_gsl_program(seq):
         "def 0",
     ]
     for i in range(1, len(seq)):
-        prev_coor, next_coor = seq[i-1], seq[i]
+        prev_coor, next_coor = seq[i - 1], seq[i]
         # assumed that the previous coordinate must be in the dictionary
         # otherwise this is not a valid generation, so find the name of the next_coor
         if next_coor in block_names.keys() or prev_coor not in block_names.keys():
@@ -72,7 +73,6 @@ def generate_gsl_program(seq):
             f"add {block_names[prev_coor]} {block_names[next_coor]} {direction}"
         )
     return "\n".join(program)
-
 
 
 def get_direction(start, end):
@@ -96,25 +96,32 @@ def generate_all_programs(fname, fdump):
     for i in tqdm.tqdm(range(len(grids))):
         path = gen_shortest_path(grids[i])
         programs.append(generate_gsl_program(path))
-    pickle.dump(programs, open(fdump, "wb+"))
+    json.dump(programs, open(fdump, "w+"))
 
 
 if __name__ == "__main__":
-    # get all of the environments
-    N = 5
-    envs = np.load("gen/data/pfinding/grids.npy")
-    fig, axs = plt.subplots(N, N, figsize=(10, 10))
-    for i in range(N):
-        for j in range(N):
-            path = gen_shortest_path(envs[i * N + j])
-            # for node in path:
-            #     envs[i * N + j][node] = 2
-            # envs[i * N + j][path[0]] = 3
-            # envs[i * N + j][path[-1]] = 3
-            axs[i, j].imshow(envs[i * N + j])
-            axs[i, j].axis("off")
-    plt.savefig("gen/data/pfinding/no_paths_no_obstacles.pdf")
-    generate_all_programs(
-        "gen/data/pfinding/grids.npy", "gen/data/pfinding/programs.pkl"
+    parser = argparse.ArgumentParser()
+    parser.add_argument("grids_file", type=str, help="path to the grids")
+    parser.add_argument("dir", type=str, help="directory to store programs")
+    parser.add_argument(
+        "fname", type=str, help="filename for program texts, no extension"
     )
-    # generate the gsl program for the last path
+    options = parser.parse_args()
+
+    envs = np.load(f"{Path(options.dir) / Path(options.grids_file)}")
+    # visualize 25 paths just to make sure that this is right
+    fig, axs = plt.subplots(5, 5, figsize=(10, 10))
+    for i in range(5):
+        for j in range(5):
+            path = gen_shortest_path(envs[i * 5 + j])
+            for node in path:
+                envs[i * 5 + j][node] = 2
+            envs[i * 5 + j][path[0]] = 3
+            envs[i * 5 + j][path[-1]] = 3
+            axs[i, j].imshow(envs[i * 5 + j])
+            axs[i, j].axis("off")
+    plt.savefig(f"{Path(options.dir) / Path(options.fname)}_preview.pdf")
+    generate_all_programs(
+        f"{Path(options.dir) / Path(options.grids_file)}",
+        f"{Path(options.dir) / Path(options.fname)}_programs.json",
+    )

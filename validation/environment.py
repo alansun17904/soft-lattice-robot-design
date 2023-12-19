@@ -13,6 +13,8 @@ def rand_env_empty_generation(n: int, output_end_coor=True) -> np.array:
     """
     start = (random.randint(0, n - 1), random.randint(0, n - 1))
     end = (random.randint(0, n - 1), random.randint(0, n - 1))
+    while end == start:
+        end = (random.randint(0, n - 1), random.randint(0, n - 1))
     grid = np.zeros((n, n))
     grid[start] = 0.5
     if output_end_coor:
@@ -179,7 +181,7 @@ def create_one_random_shape(grid, start, size=None):
     q = [start]
     count = 1
     while count < size and q:
-        curr = q.pop(random.randint(0, len(q)-1))
+        curr = q.pop(random.randint(0, len(q) - 1))
         if grid[curr] != 0.5:
             grid[curr] = 1
         for dx, dy in [(-1, 0), (0, -1), (1, 0), (0, 1)]:
@@ -187,8 +189,8 @@ def create_one_random_shape(grid, start, size=None):
                 min(max(curr[0] + dx, 0), len(grid) - 1),
                 min(max(curr[1] + dy, 0), len(grid) - 1),
             )
-            if (i,j) not in visited and grid[(i,j)] != 1:
-                q.append((i,j))
+            if (i, j) not in visited and grid[(i, j)] != 1:
+                q.append((i, j))
         visited.append(curr)
         count += 1
     return grid
@@ -286,7 +288,9 @@ def gen_pfinding_envs(
     # save the grids
 
 
-def gen_no_obstacle_pfinding(fname, grid_size=10, N=100, _dir="gen/data/pfinding/simple"):
+def gen_no_obstacle_pfinding(
+    fname, grid_size=10, N=100, _dir="gen/data/pfinding/simple"
+):
     grids = []
     for _ in tqdm.tqdm(range(N)):
         grid, start, end = rand_env_empty_generation(grid_size)
@@ -303,7 +307,9 @@ def gen_no_obstacle_pfinding(fname, grid_size=10, N=100, _dir="gen/data/pfinding
     plt.savefig(f"{Path(_dir) / Path(fname)}_preview.pdf")
 
 
-def gen_matching_envs(fname, grid_size, size=None, N=1000, _dir="gen/data/matching/simple"):
+def gen_matching_envs(
+    fname, grid_size, size=None, N=1000, _dir="gen/data/matching/simple"
+):
     grids = []
     for _ in tqdm.tqdm(range(N)):
         grid, start = rand_env_empty_generation(grid_size, output_end_coor=False)
@@ -320,7 +326,9 @@ def gen_matching_envs(fname, grid_size, size=None, N=1000, _dir="gen/data/matchi
     plt.savefig(f"{Path(_dir) / Path(fname)}_preview.pdf")
 
 
-def gen_diff_matching_envs(fname, grid_size, size=None, N=1000, _dir="gen/data/matching/diff"):
+def gen_diff_matching_envs(
+    fname, grid_size, size=None, N=1000, _dir="gen/data/matching/diff"
+):
     grids = []
     rewards = []
     for _ in tqdm.tqdm(range(N)):
@@ -378,8 +386,8 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "-matching-size",
-        type=int, 
-        help="size of the shape being mathced, only applies to matching and diff-matching"
+        type=int,
+        help="size of the shape being mathced, only applies to matching and diff-matching",
     )
     # TODO: add another options that controls the variance of the rewards for the
     # environment. The higher the variance the harder the validation task.
@@ -420,7 +428,7 @@ if __name__ == "__main__":
             grid_size=options.grid_size,
             N=options.N,
             size=options.matching_size,
-            _dir=options.dir
+            _dir=options.dir,
         )
     elif options.task == "diff-matching":
         gen_diff_matching_envs(
@@ -428,5 +436,5 @@ if __name__ == "__main__":
             grid_size=options.grid_size,
             N=options.N,
             size=options.matching_size,
-            _dir=options.dir
+            _dir=options.dir,
         )
