@@ -26,6 +26,7 @@ generated M data points, then it will end.
 """
 
 
+import re
 import json
 import tqdm
 import random
@@ -159,7 +160,16 @@ def main():
     # loaded in line by line
     with open(options.losses_file) as f:
         for line in f.readlines():
-            losses.append(list(json.loads(line).values())[0][-1])
+            # replace all `nan` values with 1000
+            line = re.sub("nan", "1000", line)
+            line_dict = json.loads(line)
+            name, loss = (
+                int(re.search("(\d+).json", list(line_dict.keys())[0]).group(1)),
+                list(line_dict.values())[0][-1]
+            )
+            losses.append((name, loss))
+    losses.sort(key=lambda x: x[0])
+    losses = [v[1] for v in losses]
     target_robots = sorted(zip(losses, robots), key=lambda x: x[0])[
         : int(options.top_p * len(robots))
     ]
