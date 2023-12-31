@@ -251,6 +251,11 @@ def forward(output=None, visualize=True):
                 begin=(0, ground_height), end=(1, ground_height), color=0x0, radius=3
             )
 
+            # output the environment image before we draw the robot
+            # only if it does not already exist. 
+            if not os.path.exists(f"env_imgs/{options.envimg_fname}"):
+                gui.show("env_imgs/{options.envimg_fname}")
+
             def circle(x, y, color):
                 gui.circle((x, y), ti.rgb_to_hex(color), 7)
 
@@ -389,6 +394,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("fname", type=str, help="config filename")
 parser.add_argument("task", type=str, help="train/plot")
 parser.add_argument("losses_fname", type=str, help="losses filename")
+parser.add_argument("envimg_fname", type=str, help="filename of environment image")
 parser.add_argument("--iters", type=int, default=100)
 options = parser.parse_args()
 
