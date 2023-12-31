@@ -246,15 +246,18 @@ def forward(output=None, visualize=True):
         else:
             advance_no_toi(t)
 
-        if (t + 1) % interval == 0 and visualize:
+        if (t + 1) % interval == 0:
             gui.line(
                 begin=(0, ground_height), end=(1, ground_height), color=0x0, radius=3
             )
 
             # output the environment image before we draw the robot
             # only if it does not already exist. 
-            if not os.path.exists(f"env_imgs/{options.envimg_fname}"):
-                gui.show("env_imgs/{options.envimg_fname}")
+            if not visualize and not os.path.exists(f"env_imgs/{options.envimg_fname}"):
+                gui.show(f"env_imgs/{options.envimg_fname}")
+                loss[None] = 0
+                compute_loss(steps - 1)
+                return
 
             def circle(x, y, color):
                 gui.circle((x, y), ti.rgb_to_hex(color), 7)
