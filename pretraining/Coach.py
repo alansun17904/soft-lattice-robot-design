@@ -44,7 +44,7 @@ class Coach():
             print(f'Probabilities: {pi}')
             print(f'Type of pi: {type(pi)}')
 
-            # action = np.random.choice(len(pi), p=pi) this line is a bug so we can just run one iteration
+            action = np.random.choice(len(pi), p=pi)  #this line is a bug so we can just run one iteration
             action = np.random.choice(len(pi), p=list(zip(*pi))[0])
             action = pi[action][1]
             currRobot = increment_state(currRobot, action)
@@ -72,6 +72,10 @@ class Coach():
             
             self.trainExamplesHistory.append(iterationTrainExamples)
 
+            f = open("history.txt", "a")
+            f.write(",".join(str(element) for element in self.trainExamplesHistory))
+            f.close()
+
             if len(self.trainExamplesHistory) > self.args.numItersForTrainExamplesHistory:
                 log.warning(
                     f"Removing the oldest entry in trainExamples. len(trainExamplesHistory) = {len(self.trainExamplesHistory)}")
@@ -84,6 +88,8 @@ class Coach():
             for e in self.trainExamplesHistory:
                 trainExamples.extend(e)
             shuffle(trainExamples)
+
+            
             
             # training new network, keeping a copy of the old one
             self.nnet.save_checkpoint(folder=self.args.checkpoint, filename='temp.pth.tar')

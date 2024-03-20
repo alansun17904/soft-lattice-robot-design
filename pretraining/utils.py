@@ -240,21 +240,20 @@ def calculate_reward(state):
     json.dump(config, open(f"./robot/{r.name}.json", "w+"))
 
     # Construct the command as you would type it in the terminal
-    command = ["python", "../simulation/mass_spring.py", f"./robot/{r.name}.json", "train", "losses-test.json", "flat.png" ] 
+    command = ["python3.8", "../simulation/mass_spring.py", f"./robot/{r.name}.json", "train", "losses-test.json", "flat.png" ] 
     # Run the command
     result = subprocess.run(command, capture_output=True, text=True)
     # Check if the execution was successful
     if result.returncode == 0:
         print("Script executed successfully!")
-        # You can also print the output of your script
-        print("Output:", result.stdout)
+        #print("Output:", result.stdout)
 
     else:
         print("Script execution failed!")
         print("Error:", result.stderr)
 
 
-    return float(result.stdout.split("\n")[-2])
+    return max(-float(result.stdout.split("\n")[-2]), -20)
 
 
 

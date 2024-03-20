@@ -4,9 +4,9 @@ from utils import dotdict
 
 args = dotdict({
     'numIters': 2,
-    'numEps': 50,              # Number of complete self-play games to simulate during a new iteration.
-    'tempThreshold': 5,        
-    'maxEpisodeLength': 10,
+    'numEps': 3,              # Number of complete self-play games to simulate during a new iteration.
+    'tempThreshold': 0,        
+    'maxEpisodeLength': 5,
     'updateThreshold': 0.6,     # During arena playoff, new neural net will be accepted if threshold or more of games are won.
     'maxlenOfQueue': 200000,    # Number of game examples to train the neural networks.
     'numMCTSSims': 25,          # Number of games moves for MCTS to simulate.

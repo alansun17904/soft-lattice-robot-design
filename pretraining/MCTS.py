@@ -60,7 +60,7 @@ class MCTS:
         Usa: upper confidence bound for action a in state s.
     """
 
-    def __init__(self, robot, network, args, num_simulations=10, max_depth=None, eps=1e-8,gpu=False):
+    def __init__(self, robot, network, args, num_simulations=3, max_depth=None, eps=1e-8,gpu=False):
         """
         :param robot: the starting robot to begin the search from
         :param network: the neural network used to evalate
@@ -103,9 +103,11 @@ class MCTS:
             # the maximum depth is reached which ever comes first.
         #    futures = [None for _ in range(self.num_simulations)]
         
-        for i in tqdm(range(self.num_simulations)):
+        for i in range(self.num_simulations):
             #    futures[i] = executor.submit(self.search, state, lock=lock)
-            self.search(state)
+            search_val = self.search(state)
+            print (search_val)
+
 
         next_state_actions_arr = utils.get_valid_actions(state)
         next_state_actions = [i for i, x in enumerate(next_state_actions_arr) if x == 1]
@@ -114,7 +116,9 @@ class MCTS:
 
         searched_action_space = [a for a in next_state_actions]
         if temp == 0:
-            best_a = np.argmax(counts)
+            bestAs = np.array(np.argwhere(next_state_actions_arr == 1)).flatten()
+            print (bestAs)
+            best_a = np.random.choice(bestAs)
             probs = [0] * len(counts)
             probs[best_a] = 1
             return list(zip(probs, searched_action_space))
@@ -177,6 +181,7 @@ class MCTS:
     
 
         if s not in self.Ps:
+            print ("s not in self.Ps")
             print(s.shape)
             self.Ps[s], v = self.network.predict(s[:, :-1])
             valids = utils.get_valid_actions(s)
@@ -218,10 +223,6 @@ class MCTS:
         print("best_act", a)
         next_s = utils.increment_state(state, a)
         
-        #if a == valids.shape[0]-1:
-        #    v = 1 #utils.calculate_reward(next_s)
-        #else:
-        #    v = self.search(next_s)
         v = self.search(next_s)
 
         if (s, a) in self.Qsa:
