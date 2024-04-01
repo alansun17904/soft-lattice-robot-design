@@ -13,17 +13,17 @@ n_grid = 3
 m_grid = 3
 
 def tensor_to_list(tensor):
-    state = [0 for _ in range(n_grid * m_grid + 1)]
-    for i in range(n_grid * m_grid + 1):
-        state[i] += int(tensor[0][i].item())
+    state = [0 for _ in range(n_grid * m_grid)]
+    for i in range(n_grid * m_grid):
+        state[i] += tensor[i]
     return state
 
 def list_to_tensor(state):
     #print("list to tensor", state)
-    tensor = torch.zeros([1, m_grid * n_grid+1], dtype=torch.float32)
-    for i in range(n_grid*m_grid +1):
-        tensor[0, i]= int(state[i])
-    assert len(state) == tensor.shape[1], f"state length is {len(state)} instead of {tensor.shape}"
+    tensor = np.zeros([m_grid * n_grid], dtype=np.float32)
+    for i in range(n_grid*m_grid):
+        tensor[i]= int(state[i])
+    assert len(state) == tensor.shape[0], f"state length is {len(state)} instead of {tensor.shape}"
     return tensor
 
 def to_grid(tensor):
@@ -50,7 +50,8 @@ def check_valid(tensor, index):
     i = index % (n_grid + 2)
     j = index // (n_grid + 2)
     if index == (n_grid+2)*(n_grid +2)+1:
-        return True
+        return False
+        # return True
     
     if 0 < i < n_grid + 1 and 0 < j < m_grid + 1:
         if state[(i-1) + (j-1) * n_grid] == 1:
@@ -180,7 +181,7 @@ def get_valid_actions(tensor):
     for i in range((n_grid + 2)*(n_grid + 2)):
             if check_valid(tensor, i):
                 valid_actions[i] = 1
-    valid_actions[(n_grid+2)*(n_grid +2)] = 1
+    valid_actions[(n_grid+2)*(n_grid +2)] = 0
     return valid_actions 
 
 def increment_state(tensor, best_act):
@@ -217,7 +218,7 @@ def increment_state(tensor, best_act):
     else:
         # no shifting
         state[(j-1) * n_grid + i - 1] = 1
-    assert len(state) == n_grid * m_grid+1, f"state length is {len(state)} instead of {n_grid * m_grid+1}. Length of tensor is {tensor.shape}"
+    assert len(state) == n_grid * m_grid, f"state length is {len(state)} instead of {n_grid * m_grid}. Length of tensor is {tensor.shape}"
     return list_to_tensor(state)
 
 def calculate_reward(state):
@@ -226,6 +227,9 @@ def calculate_reward(state):
 
     """
     #TODO: do a check here to access a dictionary to get reward
+
+    # test
+    return 0 
     
     # transfer to json configuration
     grid = to_grid(state)
@@ -252,8 +256,8 @@ def calculate_reward(state):
         print("Script execution failed!")
         print("Error:", result.stderr)
 
-
-    return max(-float(result.stdout.split("\n")[-2]), -20)
+    print ("Reward", -0.1 * min(float(result.stdout.split("\n")[-2]), 20) + 1)
+    return -0.1 * min(float(result.stdout.split("\n")[-2]), 20) + 1
 
 
 

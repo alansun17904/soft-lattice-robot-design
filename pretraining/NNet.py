@@ -28,9 +28,9 @@ class NeuralNet(nn.Module):
         self.conv3 = nn.Conv2d(args.num_channels, args.num_channels, 3, stride=1)
         #self.conv4 = nn.Conv2d(args.num_channels, args.num_channels, 3, stride=1)
 
-        #self.bn1 = nn.BatchNorm2d(args.num_channels)
-        #self.bn2 = nn.BatchNorm2d(args.num_channels)
-        #self.bn3 = nn.BatchNorm2d(args.num_channels)
+        self.bn1 = nn.BatchNorm2d(args.num_channels)
+        self.bn2 = nn.BatchNorm2d(args.num_channels)
+        self.bn3 = nn.BatchNorm2d(args.num_channels)
         #self.bn4 = nn.BatchNorm2d(args.num_channels)
 
         self.fc1 = nn.Linear(args.num_channels*(self.grid_x-2)*(self.grid_y-2), 1024)
@@ -46,14 +46,14 @@ class NeuralNet(nn.Module):
 
     def forward(self, s):
         s = s.view(-1, 1, self.grid_x, self.grid_y)                # batch_size x 1 x board_x x board_y
-        s = F.relu(self.conv1(s))                          # batch_size x num_channels x board_x x board_y
-        s = F.relu(self.conv2(s))                          # batch_size x num_channels x board_x x board_y
-        s = F.relu(self.conv3(s))                          # batch_size x num_channels x (board_x-2) x (board_y-2)
+        #s = F.relu(self.conv1(s))                          # batch_size x num_channels x board_x x board_y
+        #s = F.relu(self.conv2(s))                          # batch_size x num_channels x board_x x board_y
+        #s = F.relu(self.conv3(s))                          # batch_size x num_channels x (board_x-2) x (board_y-2)
         #s = F.relu(self.conv4(s))                          # batch_size x num_channels x (board_x-4) x (board_y-4)
 
-        #s = F.relu(self.bn1(self.conv1(s)))                          # batch_size x num_channels x board_x x board_y
-        #s = F.relu(self.bn2(self.conv2(s)))                          # batch_size x num_channels x board_x x board_y
-        #s = F.relu(self.bn3(self.conv3(s)))                          # batch_size x num_channels x (board_x-2) x (board_y-2)
+        s = F.relu(self.bn1(self.conv1(s)))                          # batch_size x num_channels x board_x x board_y
+        s = F.relu(self.bn2(self.conv2(s)))                          # batch_size x num_channels x board_x x board_y
+        s = F.relu(self.bn3(self.conv3(s)))                          # batch_size x num_channels x (board_x-2) x (board_y-2)
         #s = F.relu(self.bn4(self.conv4(s)))                          # batch_size x num_channels x (board_x-4) x (board_y-4)
         s = s.view(-1, self.args.num_channels*(self.grid_x-2)*(self.grid_y-2))
 

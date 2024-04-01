@@ -56,8 +56,14 @@ class NNetWrapper():
             for _ in t:
                 sample_ids = np.random.randint(len(examples), size=args.batch_size)
                 robots, pis, vs = list(zip(*[examples[i] for i in sample_ids]))
-                robots = torch.FloatTensor(np.array(robots).astype(np.float64))
-                target_pis = torch.FloatTensor(np.array(pis))
+                #robots = torch.FloatTensor(np.array(robots).astype(np.float64))
+                robots = torch.FloatTensor(np.array(robots))
+                pis_np = np.zeros((len(pis), 5*5+1))
+                for i in range(len(pis)):
+                    for j in range(len(pis[i])):
+                        id = pis[i][j][1]
+                        pis_np[i][id] = pis[i][j][0]
+                target_pis = torch.FloatTensor(pis_np.astype(np.float64))
                 target_vs = torch.FloatTensor(np.array(vs).astype(np.float64))
 
                 # predict
@@ -65,7 +71,7 @@ class NNetWrapper():
                     robots, target_pis, target_vs = robots.contiguous().cuda(), target_pis.contiguous().cuda(), target_vs.contiguous().cuda()
 
                 # compute output
-                out_pi, out_v = self.forward(robots)
+                out_pi, out_v = self.nnet.forward(robots)
                 l_pi = self.loss_pi(target_pis, out_pi)
                 l_v = self.loss_v(target_vs, out_v)
                 total_loss = l_pi + l_v
@@ -80,7 +86,7 @@ class NNetWrapper():
                 total_loss.backward()
                 optimizer.step()
 
-    def predict(self, robot):
+    def predict(self, state):
         """
         Input:
             board: current board in its canonical form.
@@ -92,8 +98,8 @@ class NNetWrapper():
         """
         start = time.time()
 
+        robot = torch.FloatTensor(state)
         # preparing input
-        #robot = torch.FloatTensor(robot.astype(np.float64))
         if args.cuda: robot = robot.contiguous().cuda()
         robot = robot.view(1, self.grid_x, self.grid_y)
         self.nnet.eval()

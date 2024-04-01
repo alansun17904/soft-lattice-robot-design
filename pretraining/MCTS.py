@@ -60,14 +60,14 @@ class MCTS:
         Usa: upper confidence bound for action a in state s.
     """
 
-    def __init__(self, robot, network, args, num_simulations=3, max_depth=None, eps=1e-8,gpu=False):
+    def __init__(self, robot, network, args, num_simulations=10, max_depth=None, eps=1e-8,gpu=False):
         """
         :param robot: the starting robot to begin the search from
         :param network: the neural network used to evalate
         """
         self.eps = eps
         self.robot = robot
-        self.num_modules = robot.count_nonzero()
+        self.num_modules = np.count_nonzero(robot)
         self.num_simulations = num_simulations
         self.max_depth = max_depth
         self.device = torch.device("cuda" if gpu else "cpu")
@@ -80,9 +80,9 @@ class MCTS:
         self.Qsa = {}
         self.Nsa = {}   # state action visit count
         self.Ns = {}    # state visit count
-        self.Ps = {}
+        self.Ps = {}    # stores initial policy (returned by neural net)
         self.Vs = {}    # valids actions of the state
-        self.Es = {}
+        self.Es = {}    # end states
 
     def get_action_probabilities(self, state, temp=1):
         """
@@ -92,6 +92,8 @@ class MCTS:
         the level of exploration vs exploitation. If temp is 0, then the
         action with the highest visit count is chosen (fully determinisitc).
         If temp is 1, then the probabilities are distributed according to visit count.
+
+        state: numpy array representing the robot state
 
         """
         print ("get_action_probabilities") 
@@ -106,18 +108,18 @@ class MCTS:
         for i in range(self.num_simulations):
             #    futures[i] = executor.submit(self.search, state, lock=lock)
             search_val = self.search(state)
-            print (search_val)
 
 
         next_state_actions_arr = utils.get_valid_actions(state)
         next_state_actions = [i for i, x in enumerate(next_state_actions_arr) if x == 1]
+        
+        s = np.array2string(state, prefix="", suffix="")
 
-        counts = [self.Nsa[(state, a)] if (state, a) in self.Nsa else 0 for a in next_state_actions]
+        counts = [self.Nsa[(s, a)] if (s, a) in self.Nsa else 0 for a in next_state_actions]
 
         searched_action_space = [a for a in next_state_actions]
         if temp == 0:
-            bestAs = np.array(np.argwhere(next_state_actions_arr == 1)).flatten()
-            print (bestAs)
+            bestAs = np.array(np.argwhere(counts == np.max(counts))).flatten()
             best_a = np.random.choice(bestAs)
             probs = [0] * len(counts)
             probs[best_a] = 1
@@ -133,7 +135,6 @@ class MCTS:
         mode_probs = mode_probs.flatten()
         if index is None:
             Ps = mode_probs[1]
-        #TODO: change this
         else:
             Ps = mode_probs[mode]
             # check if the action is valid
@@ -168,12 +169,13 @@ class MCTS:
         updated.
         """
         print ("search function") 
-        robot_count = state.count_nonzero()
+        robot_count = np.count_nonzero(state)
         t = torch.tensor([robot_count])  # .to(self.device)
-        s = state
+        s = np.array2string(state, prefix="", suffix="")
         # check robot is in end state
 
-        if s[0][-1] == 1:
+        #if s[0][-1] == 1:
+        if robot_count == 5:
             print("end state")
             if s not in self.Es:
                 self.Es[s] = utils.calculate_reward(s)
@@ -181,10 +183,9 @@ class MCTS:
     
 
         if s not in self.Ps:
-            print ("s not in self.Ps")
-            print(s.shape)
-            self.Ps[s], v = self.network.predict(s[:, :-1])
-            valids = utils.get_valid_actions(s)
+            # print ("s not in self.Ps")
+            self.Ps[s], v = self.network.predict(state)
+            valids = utils.get_valid_actions(state)
             self.Ps[s] = self.Ps[s] * valids  # masking invalid moves
             sum_Ps_s = np.sum(self.Ps[s])
             
@@ -223,6 +224,7 @@ class MCTS:
         print("best_act", a)
         next_s = utils.increment_state(state, a)
         
+        print("next_s", next_s)
         v = self.search(next_s)
 
         if (s, a) in self.Qsa:
