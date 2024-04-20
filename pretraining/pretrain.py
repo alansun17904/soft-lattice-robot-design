@@ -3,6 +3,7 @@ import sys
 import math
 import json
 import argparse
+import torch
 from transformers import BartTokenizer, BartForCausalLM
 from transformers import DataCollatorForLanguageModeling
 from transformers import Trainer, TrainingArguments
@@ -31,7 +32,7 @@ if HUB_TOKEN is None:
 tokenizer = BartTokenizer.from_pretrained("facebook/bart-large")
 model = BartForCausalLM.from_pretrained("facebook/bart-large")
 data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
-data = json.load(open(options.program_file, "r"))
+data = json.load(open(options.programs_file, "r"))
 
 
 # split the data into train and test
@@ -81,5 +82,6 @@ trainer = Trainer(
 )
 
 trainer.train()
+torch.save(model.state_dict(), os.path.join(options.output_directory, "model.pth"))
 eval_results = trainer.evaluate()
 print(f"Perplexity: {math.exp(eval_results['eval_loss']):.2f}")

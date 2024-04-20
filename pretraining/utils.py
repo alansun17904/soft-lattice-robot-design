@@ -30,7 +30,7 @@ def to_grid(tensor):
     grid = [[0 for i in range(n_grid)] for j in range(m_grid)]
     for i in range(n_grid):
         for j in range(m_grid):
-            grid[j][i] = int(tensor[0][j * n_grid + i].item())
+            grid[j][i] = int(tensor[(2-j) * n_grid + i])
     return grid
 
 def to_binarystring(grid):
@@ -56,8 +56,7 @@ def check_valid(tensor, index):
     if 0 < i < n_grid + 1 and 0 < j < m_grid + 1:
         if state[(i-1) + (j-1) * n_grid] == 1:
             return False
-    
-    
+     
     
     if i == 0:
         # check column n_grid are all zeros
@@ -228,8 +227,16 @@ def calculate_reward(state):
     """
     #TODO: do a check here to access a dictionary to get reward
 
+    # return 0
+
+    f = open("all_configs_rewards.txt", "r")
+    for line in f:
+        if line.split(",")[0] == str(state):
+            reward = float(line.split(",")[1])
+            print ("Reward form dict", reward)
+            return reward #(reward/0.3 - 1)
     # test
-    return 0 
+    #return 0 
     
     # transfer to json configuration
     grid = to_grid(state)
@@ -256,12 +263,58 @@ def calculate_reward(state):
         print("Script execution failed!")
         print("Error:", result.stderr)
 
-    print ("Reward", -0.1 * min(float(result.stdout.split("\n")[-2]), 20) + 1)
-    return -0.1 * min(float(result.stdout.split("\n")[-2]), 20) + 1
+    print ("Reward", -float(result.stdout.split("\n")[-3].split(" ")[-1]))
+    return (-float(result.stdout.split("\n")[-3].split(" ")[-1]))
+    return 2 - 2 / (1 + np.exp(-min(float(result.stdout.split("\n")[-2]), 20)))
+    #return -0.1 * min(float(result.stdout.split("\n")[-2]), 20) + 1
 
+def count_occurances():
+    counts = {}
+    f = open("history.txt", "r")
+    for line in f:
+        state = (line[line.find("["):line.find("]")+1])
+        state = state.replace(",", "")
+        if state.count("1") == 4:
+            if state in counts:
+                counts[state] += 1
+            else:
+                counts[state] = 1
+    return counts
 
+def spearman_correlation():
+    print ("Spearman correlation")
+    counts = count_occurances()
+    rewards = {}
+    spearman_correlation = 0
+    print (counts)
 
+    f = open("all_configs_rewards.txt", "r")
+    # get reward score, and count for each leaf state
+    for line in f:
+        state = line.split(",")[0]
+        if state in counts.keys():
+            rewards[state] = float(line.split(",")[1])
 
+    print("rewards", rewards)
+    
+    #get rank
+    counts_rank = {}
+    rewards_rank = {}
+
+    for i, key in enumerate(sorted(counts, key=counts.get, reverse=True)):
+        counts_rank[key] = i
+    for i, key in enumerate(sorted(rewards, key=rewards.get, reverse=True)):
+        rewards_rank[key] = i
+
+    print (counts_rank)
+    print (rewards_rank)
+    
+    for key in counts_rank.keys():
+        print (key, counts_rank[key], rewards_rank[key])
+        spearman_correlation += (counts_rank[key] - rewards_rank[key]) ** 2
+
+    spearman_correlation = 1 - 6 * spearman_correlation / (len(counts_rank) * (len(counts_rank) ** 2 - 1))
+    print(spearman_correlation)
 
 class AverageMeter(object):
     """From https://github.com/pytorch/examples/blob/master/imagenet/main.py"""

@@ -37,13 +37,9 @@ from tabulate import tabulate
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
-    "robots_file", type=str, help="json file containing list of binary matrices"
-)
-parser.add_argument(
-    "losses_file",
+    "input_file",
     type=str,
-    help="json file containning the losses from the simulation \
-        indexed the same way as the previous file",
+    help="file path of all_configs_rewards.txt file that contains the robots and rewards",
 )
 parser.add_argument(
     "top_p", type=float, help="the top percentile of robots that we want to keep"
@@ -119,6 +115,7 @@ def generate_gsl_program(seq):
     """
     block_names = {seq[0][0]: 0}
     program = [
+        "Create robot structure to optimize walking from left to right",
         "def 0",
     ]
     for i in range(1, len(seq)):
@@ -155,29 +152,42 @@ def get_direction(start, end):
 def main():
     programs = []
     losses = []
-    robots = json.load(open(options.robots_file))
-    # the losses are a series of dictionaries so they need to be
-    # loaded in line by line
-    with open(options.losses_file) as f:
+    robots = []
+
+    with open(options.input_file) as f:
         for line in f.readlines():
             # replace all `nan` values with 1000
             line = re.sub("nan", "1000", line)
-            line_dict = json.loads(line)
             name, loss = (
-                int(re.search("(\d+).json", list(line_dict.keys())[0]).group(1)),
-                list(line_dict.values())[0][-1],
+                line.split(", ")[0],
+                float(line.split(", ")[-1].strip("\n"))
             )
             losses.append((name, loss))
     losses.sort(key=lambda x: x[0])
+    for v in losses:
+        item = (v[0].strip("[").strip("]").split(". "))
+        for a in item:
+            robots.append(int(a.strip(".")))
+    robots = [robots[x:x+3] for x in range(0, len(robots), 3)]
+    robots = [robots[x:x+3] for x in range(0, len(robots), 3)]
+    
+    robots = [np.flip(robot, axis=0) for robot in robots]
+        
     losses = [v[1] for v in losses]
+    
     target_robots = sorted(zip(losses, robots), key=lambda x: x[0])[
         : int(options.top_p * len(robots))
     ]
 
+    print (target_robots)
+
+
     for robot in tqdm.tqdm(target_robots):
         seqs = bfs_one_robot(robot[1], N=options.N)
         programs.extend([generate_gsl_program(s) for s in seqs])
-
+    
+    
+    
     print(
         tabulate(
             [

@@ -7,6 +7,7 @@ import numpy as np
 from random import shuffle
 from collections import deque
 import logging
+import random
 
 
 log = logging.getLogger(__name__)
@@ -49,11 +50,12 @@ class Coach():
             action = np.random.choice(len(pi), p=list(zip(*pi))[0])
             action = pi[action][1]
             currRobot = increment_state(currRobot, action)
+            s = np.array2string(currRobot, prefix="", suffix="")
 
             trainExamples.append([currRobot, pi])
             
             #if currRobot[0][-1] == 1:
-            if np.count_nonzero(currRobot) == 5:
+            if np.count_nonzero(currRobot) == 4:
                 if s not in self.Es:
                     self.Es[s] = calculate_reward(currRobot)
                 r = self.Es[s]
@@ -74,7 +76,7 @@ class Coach():
             
             self.trainExamplesHistory.append(iterationTrainExamples)
 
-            f = open("test.txt", "a")
+            f = open("history.txt", "a")
             f.write("\n".join(str(element) for element in iterationTrainExamples))
             f.close()
 

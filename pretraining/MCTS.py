@@ -60,7 +60,7 @@ class MCTS:
         Usa: upper confidence bound for action a in state s.
     """
 
-    def __init__(self, robot, network, args, num_simulations=10, max_depth=None, eps=1e-8,gpu=False):
+    def __init__(self, robot, network, args, num_simulations=50, max_depth=None, eps=1e-8,gpu=False):
         """
         :param robot: the starting robot to begin the search from
         :param network: the neural network used to evalate
@@ -96,7 +96,7 @@ class MCTS:
         state: numpy array representing the robot state
 
         """
-        print ("get_action_probabilities") 
+        # print ("get_action_probabilities") 
         #m = multiprocessing.Manager()
         #lock = m.Lock()
         #with ProcessPoolExecutor(max_workers=4) as executor:
@@ -168,17 +168,17 @@ class MCTS:
         outcome is propogated up the search path. The values of Ns, Nsa, Qsa are
         updated.
         """
-        print ("search function") 
+        # print ("search function") 
         robot_count = np.count_nonzero(state)
         t = torch.tensor([robot_count])  # .to(self.device)
         s = np.array2string(state, prefix="", suffix="")
         # check robot is in end state
 
         #if s[0][-1] == 1:
-        if robot_count == 5:
-            print("end state")
+        if robot_count == 4:
+            #print("end state")
             if s not in self.Es:
-                self.Es[s] = utils.calculate_reward(s)
+                self.Es[s] = utils.calculate_reward(state)
             return self.Es[s]
     
 
@@ -221,14 +221,14 @@ class MCTS:
                     best_act = a
 
         a = best_act
-        print("best_act", a)
+        # print("best_act", a)
         next_s = utils.increment_state(state, a)
         
-        print("next_s", next_s)
+        # print("next_s", next_s)
         v = self.search(next_s)
 
         if (s, a) in self.Qsa:
-            self.Qsa[(s, a)] = (self.Nsa[(s, a)] * self.Qsa[(s, a)] + v) / (self.Nsa[(s, a)] + 1)
+            self.Qsa[(s, a)] = max(v, self.Qsa[(s,a)])#(self.Nsa[(s, a)] * self.Qsa[(s, a)] + v) / (self.Nsa[(s, a)] + 1)# 
             self.Nsa[(s, a)] += 1
 
         else:
