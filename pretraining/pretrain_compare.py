@@ -46,7 +46,10 @@ print(f"Train: {len(train)} programs, Test: {len(test)} programs")
 train_encodings = tokenizer(train, truncation=True, padding=True, return_tensors="pt")
 test_encodings = tokenizer(test, truncation=True, padding=True, return_tensors="pt")
 print("Finished tokenizing")
-
+print (type(test_encodings))
+test_labels = test_encodings.copy() #tokenizer(test, truncation=True, padding=True, return_tensors="pt")
+for i in range(len(test_encodings["input_ids"])):
+    test_labels["input_ids"][i][:(test_labels["input_ids"][i]==50256).nonzero()[-2]] = -100
 # reshape the tensors from dict to list of dict
 train_encodings = [
     {
@@ -60,7 +63,7 @@ train_encodings = [
 test_encodings = [
     {
         "input_ids": test_encodings["input_ids"][i],
-        "labels": test_encodings["input_ids"][i],
+        "labels": test_labels["input_ids"][i],
         "attention_mask": torch.clone(test_encodings["attention_mask"][i])
     }
     for i in range(len(test_encodings["input_ids"]))

@@ -1,12 +1,15 @@
+from transformers import BartTokenizer, BartForCausalLM
+
+tokenizer = BartTokenizer.from_pretrained("facebook/bart-large")
+
+input_text = ["def 0\ndef 1\nadd 0 1 <e>"]
 
 
-count = 0
-f = open("all_configs_rewards.txt", "r")
+print (tokenizer.tokenize("def 0\ndef 1\nadd 0 1 <e>"))
 
-for line in f:
-    state = line.split(",")[0]
-    if state.count("1") == 4:
-        print(state)
-        count += 1
-    
-print(count)
+# Tokenize
+tokens = tokenizer.add_tokens(["<e>"])
+
+
+print(tokens)
+print (tokenizer.tokenize("def 0\ndef 1\nadd 0 1 <e>"))

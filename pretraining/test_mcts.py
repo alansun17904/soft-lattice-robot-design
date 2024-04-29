@@ -6,7 +6,7 @@ from tqdm import tqdm
 # generate all legal robot configs mathematically to a file
 def generate_all(n=3):
 
-    output = open("all_configs_rewards.txt", "w")
+    output = open("all_configs_rewards.txt", "a")
 
     for i in tqdm(range(1, pow(2, n*n))):
         # change to binary
@@ -76,7 +76,8 @@ def check_connected_ones(grid):
 
 
 
-generate_all(3)
+generate_all(4)
+generate_all(5)
 
 # use generated robots configurations to run simulations
 # we want a brute force solution to check if the MCTS is working correctly

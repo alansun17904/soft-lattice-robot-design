@@ -153,6 +153,27 @@ def get_direction(start, end):
         #return "<w>"
         return "to the left"
 
+def generate_comparison(seq1, seq2, r1, r2):
+    program = [
+        "<|endoftext|> Choose the better congfiguration between the following two <|endoftext|>" 
+    ]
+
+    seqA = generate_gsl_program(seq1)
+    seqB = generate_gsl_program(seq2)
+    
+    case = random.randint(0,1)
+    
+    if (case == 0):
+        program.extend(["(a)", seqA, "<|endoftext|> (b)", seqB, "<|endoftext|>"])
+    else:
+        program.extend(["(a)", seqB, "<|endoftext|> (b)", seqA, "<|endoftext|>"])
+
+    if (r1 > r2):
+        program.extend(["(a)", seqA, "<|endoftext|>"])
+    else:
+        program.extend(["(b)", seqB, "<|endoftext|>"])
+    
+    return "".join(program)
 
 def main():
     programs = []
@@ -189,8 +210,11 @@ def main():
 
     for robot in tqdm.tqdm(target_robots):
         seqs = bfs_one_robot(robot[1], N=options.N)
-        programs.extend([generate_gsl_program(s) for s in seqs])
-    
+        robot2 = random.choice(target_robots)
+        seqs2 = bfs_one_robot(robot2[1], N=options.N)
+        r1 = robot[0]
+        r2 = robot2[0]
+        programs.extend([generate_comparison(s1, s2, r1, r2) for (s1, s2) in zip(seqs, seqs2)]) 
     
     
     print(
