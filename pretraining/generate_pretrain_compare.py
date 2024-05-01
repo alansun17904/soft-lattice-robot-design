@@ -155,7 +155,7 @@ def get_direction(start, end):
 
 def generate_comparison(seq1, seq2, r1, r2):
     program = [
-        "<|endoftext|> Choose the better congfiguration between the following two <|endoftext|>" 
+        "<|endoftext|> We are designing a soft modular robot for walking from left to right on a plane. Choose the better congfiguration between the following two <|endoftext|>" 
     ]
 
     seqA = generate_gsl_program(seq1)
@@ -202,7 +202,7 @@ def main():
     losses = [v[1] for v in losses]
     
     target_robots = sorted(zip(losses, robots), key=lambda x: x[0])[
-        : int(options.top_p * len(robots))
+            -int(options.top_p * len(robots)):
     ]
 
     print (target_robots)

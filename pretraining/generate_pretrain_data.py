@@ -132,7 +132,8 @@ def generate_gsl_program(seq):
             #f"<add> block{block_names[prev_coor]} block{block_names[next_coor]} {direction}"
             f"place block{block_names[next_coor]} {direction} of block{block_names[prev_coor]}"
         )
-    return "; ".join([i for i in program if i.startswith("create")] + [i for i in program if not i.startswith("create")])
+    return "; ".join(["<|endoftext|>Please generate robot design for walking from left to right on a plane <|endoftext|>"] + 
+[i for i in program if i.startswith("create")] + [i for i in program if not i.startswith("create")] + ["<|endoftext|>"])
 
 
 def get_direction(start, end):
@@ -181,7 +182,7 @@ def main():
     losses = [v[1] for v in losses]
     
     target_robots = sorted(zip(losses, robots), key=lambda x: x[0])[
-        : int(options.top_p * len(robots))
+            -int(options.top_p * len(robots)):
     ]
 
     print (target_robots)

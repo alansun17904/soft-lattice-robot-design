@@ -18,12 +18,16 @@ tokenizer.add_special_tokens({'pad_token': '[PAD]'})
 model.resize_token_embeddings(len(tokenizer))
 
 
-model.load_state_dict(torch.load("./test_output/model_sentence.pth"))
+model.load_state_dict(torch.load("./test_output/model.pth"))
 generator = pipeline("text-generation", model=model, tokenizer=tokenizer)
 
-prompt = "<|endoftext|>"
+#prompt = "<|endoftext|> We are designing a soft modular robot for walking from left to right on a plane. Choose the better congfiguration between the following two <|endoftext|>(a)create block0; create block1; create block2; create block3; place block1 to the right of block0; place block2 to the right of block1; place block3 at the bottom of block2<|endoftext|> (b)create block0; create block1; create block2; create block3; create block4; create block5; place block1 at the bottom of block0; place block2 to the right of block0; place block3 at the bottom of block1; place block4 to the right of block3; place block5 to the left of block3<|endoftext|>"
+
+#prompt = "<|endoftext|> We are designing a soft modular robot for walking from left to right on a plane. Choose the better congfiguration between the following two <|endoftext|>(a)create block0; create block1; create block2; create block3; place block1 at the bottom of block0; place block2 to the left of block1; place block3 at the bottom of block2<|endoftext|> (b)create block0; create block1; create block2; create block3; place block1 at the bottom of block0; place block2 at the bottom of block1; place block3 to the left of block2<|endoftext|>"
+
+prompt = "<|endoftext|> Please generate a robot design for walking from left to right on a plane.<|endoftext|>"
 
 inputs = tokenizer(prompt, return_tensors="pt", add_special_tokens=False).input_ids
 print (inputs)
-outputs = model.generate(inputs, max_new_tokens=220, do_sample=True, top_k=5, top_p=0.95)
+outputs = model.generate(inputs, max_new_tokens=400, do_sample=True, top_k=5, top_p=0.95)
 print(tokenizer.batch_decode(outputs, skip_special_tokens=True))

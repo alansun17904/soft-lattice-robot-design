@@ -4,10 +4,12 @@ import math
 import json
 import argparse
 import torch
+from random import shuffle
 from transformers import DataCollatorForLanguageModeling
 from transformers import Trainer, TrainingArguments
 
 from transformers import GPTNeoForCausalLM, GPT2Tokenizer 
+os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -34,6 +36,7 @@ tokenizer = GPT2Tokenizer.from_pretrained("EleutherAI/gpt-neo-1.3B")
 tokenizer.add_special_tokens({'pad_token': '[PAD]'})
 data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
 data = json.load(open(options.programs_file, "r"))
+shuffle(data)
 
 #tokenizer.add_tokens(["<def>", "<add>", "<n>", "<b>", "<e>", "<w>", "|"])
 model.resize_token_embeddings(len(tokenizer))
@@ -47,10 +50,16 @@ train_encodings = tokenizer(train, truncation=True, padding=True, return_tensors
 test_encodings = tokenizer(test, truncation=True, padding=True, return_tensors="pt")
 print("Finished tokenizing")
 print (type(test_encodings))
-test_labels = test_encodings.copy() #tokenizer(test, truncation=True, padding=True, return_tensors="pt")
-for i in range(len(test_encodings["input_ids"])):
-    test_labels["input_ids"][i][:(test_labels["input_ids"][i]==50256).nonzero()[-2]] = -100
+#train_labels = train_encodings.copy()
+#for i in range(len(train_encodings["input_ids"])):
+#    train_labels["input_ids"][i][:(train_labels["input_ids"][i]==50256).nonzero()[-2]] = 0
+
+#test_labels = test_encodings.copy()
+#for i in range(len(test_encodings["input_ids"])):
+#    test_labels["input_ids"][i][:(test_labels["input_ids"][i]==50256).nonzero()[-2]] = 0
+
 # reshape the tensors from dict to list of dict
+
 train_encodings = [
     {
         "input_ids": train_encodings["input_ids"][i],
@@ -63,13 +72,16 @@ train_encodings = [
 test_encodings = [
     {
         "input_ids": test_encodings["input_ids"][i],
-        "labels": test_labels["input_ids"][i],
-        "attention_mask": torch.clone(test_encodings["attention_mask"][i])
+        "attention_mask": test_encodings["attention_mask"][i],
+        "labels": torch.clone(test_encodings["input_ids"][i])
+#test_labels["input_ids"][i]
     }
     for i in range(len(test_encodings["input_ids"]))
 ]
 
-
+print(train_encodings[0])
+print(train_encodings[0]["input_ids"].shape)
+print(train_encodings[0]["labels"].shape)
 
 training_args = TrainingArguments(
     output_dir=options.output_directory,
@@ -79,8 +91,8 @@ training_args = TrainingArguments(
     evaluation_strategy="epoch",
     learning_rate=2e-5,
     weight_decay=0.01,
-    per_device_train_batch_size=2,
-    per_device_eval_batch_size=2,
+    per_device_train_batch_size=10,
+    per_device_eval_batch_size=10,
     save_steps = 0.2
 )
 
@@ -99,7 +111,7 @@ eval_results = trainer.evaluate()
 prompt = "<|endoftext|>"
 inputs = tokenizer(prompt, add_special_tokens=False, return_tensors="pt").input_ids.to('cuda')
 print (inputs)
-outputs = model.generate(inputs, max_new_tokens=100, do_sample=True, top_k=50, top_p=0.95)
+outputs = model.generate(inputs, max_new_tokens=500, do_sample=True, top_k=50, top_p=0.95)
 
 print(f"Perplexity: {math.exp(eval_results['eval_loss']):.2f}")
 print(tokenizer.batch_decode(outputs))
