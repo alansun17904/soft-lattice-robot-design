@@ -5,6 +5,7 @@ import subprocess
 import sys
 import torch
 import numpy as np
+import random
 
 sys.path.append('../')
 import simulation.generate_robot_config as generate_robot_config
@@ -248,10 +249,12 @@ def calculate_reward(state):
         "angle_springs": r.angle_springs,
     }
 
-    json.dump(config, open(f"./robot/{r.name}.json", "w+"))
-
+    name = random.randint(1000000,9999999)
+    json.dump(config, open(f"./robot/{name}.json", "w+"))
+    
+    
     # Construct the command as you would type it in the terminal
-    command = ["python3.8", "../simulation/mass_spring.py", f"./robot/{r.name}.json", "train", "losses-test.json", "flat.png" ] 
+    command = ["python3.8", "../simulation/mass_spring.py", f"./robot/{name}.json", "train", "losses-test.json", "flat.png" ] 
     # Run the command
     result = subprocess.run(command, capture_output=True, text=True)
     # Check if the execution was successful

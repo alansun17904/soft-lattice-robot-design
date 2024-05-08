@@ -2,6 +2,9 @@ import torch
 import numpy as np
 import utils
 from tqdm import tqdm
+import concurrent.futures
+import random
+from os import cpu_count
 
 # generate all legal robot configs mathematically to a file
 def generate_all(n=3):
@@ -75,9 +78,48 @@ def check_connected_ones(grid):
     return True
 
 
+def generate_fixed_amount_random(n, num_robots):
+    
+    robots = []
 
-generate_all(4)
-generate_all(5)
+    while (len(robots) < num_robots): 
+        robot = np.zeros(n*n)
+        num = random.randint(1, pow(2, n*n))
+        
+        for j in range(n*n):
+            robot[j] = (num // pow(2, j)) % 2
+            
+        
+        # check valid configuration
+        valid = check_connected_ones(utils.to_grid(robot))
+        #print (utils.to_grid(robot))
+        #print ("valid: ", valid, robot)
+    
+        if valid:
+            robots.append(robot)
+    
+    output = open("configs_rewards_partial45.txt", "a")
+    
+    num_processes = int(0.85 * cpu_count())
+    #num_processes = 3
+    with concurrent.futures.ProcessPoolExecutor(max_workers=num_processes) as executor:
+        results = executor.map(get_reward, robots)
+    
+    for result in results:
+        output.write(result)
+        #print (result)
+
+def get_reward(robot):
+    print (robot)
+    reward = utils.calculate_reward(robot)
+    return str(robot).replace("\n", "") + ", " + str(reward) + "\n"
+    
+
+
+generate_fixed_amount_random(4, 1000)
+
+#generate_all(4)
+#generate_all(5)
 
 # use generated robots configurations to run simulations
 # we want a brute force solution to check if the MCTS is working correctly
