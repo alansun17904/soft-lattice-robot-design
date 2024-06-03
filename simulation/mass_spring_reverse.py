@@ -7,16 +7,27 @@ import math
 import numpy as np
 import os
 
+ti.init(arch=ti.gpu)
+
 random.seed(0)
 np.random.seed(0)
+
+parser = argparse.ArgumentParser()
+parser.add_argument("fname", type=str, help="config filename")
+parser.add_argument("task", type=str, help="train/plot")
+parser.add_argument("losses_fname", type=str, help="losses filename")
+parser.add_argument("envimg_fname", type=str, help="filename of environment image")
+parser.add_argument("--iters", type=int, default=20)
+parser.add_argument("--steps", type=int, default=2048)
+options = parser.parse_args()
 
 real = ti.f32
 ti.init(default_fp=real)
 
-max_steps = 4096
+max_steps = options.steps*2 
 vis_interval = 256
 output_vis_interval = 8
-steps = 2048 // 3
+steps = options.steps // 3
 assert steps * 2 <= max_steps
 
 scalar = lambda: ti.field(dtype=real)
@@ -222,7 +233,8 @@ def compute_loss(t: ti.i32):
     loss[None] = x[t, head_id][0]
 
 
-gui = ti.GUI("Mass Spring Robot", (512, 512), background_color=0xFFFFFF)
+#gui = ti.GUI("Mass Spring Robot", (512, 512), background_color=0xFFFFFF)
+gui = ti.GUI(show_gui=False)
 
 
 def forward(output=None, visualize=True):
@@ -295,7 +307,8 @@ def forward(output=None, visualize=True):
                 gui.show()
 
     loss[None] = 0
-    compute_loss(steps - 1)
+    compute_loss(total_steps - 1)
+    return loss[None]
 
 
 @ti.kernel
@@ -393,13 +406,7 @@ def optimize(toi, visualize):
     return losses
 
 
-parser = argparse.ArgumentParser()
-parser.add_argument("fname", type=str, help="config filename")
-parser.add_argument("task", type=str, help="train/plot")
-parser.add_argument("losses_fname", type=str, help="losses filename")
-parser.add_argument("envimg_fname", type=str, help="filename of environment image")
-parser.add_argument("--iters", type=int, default=100)
-options = parser.parse_args()
+
 
 
 def main():
@@ -417,8 +424,13 @@ def main():
     else:
         optimize(toi=True, visualize=True)
         clear()
-        forward("final{}".format(options.fname))
-
+        final_loss = forward("final{}".format(options.fname))
+        with open(options.fname.replace(".json", ".txt"), "w") as f:
+            f.write(str(final_loss))
+        
+        x_np = x.to_numpy()[:, head_id, 0]
+        x_np = x_np - x_np[0]
+        np.savetxt(options.fname.replace(".json", "x.txt"), x_np, delimiter=',') 
 
 if __name__ == "__main__":
     main()

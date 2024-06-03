@@ -13,10 +13,10 @@ np.random.seed(0)
 real = ti.f32
 ti.init(default_fp=real)
 
-max_steps = 4096
+max_steps = 4096*2
 vis_interval = 256
 output_vis_interval = 8
-steps = 2048 // 3
+steps = 2 * 2048 // 3
 assert steps * 2 <= max_steps
 
 scalar = lambda: ti.field(dtype=real)
@@ -242,11 +242,12 @@ def advance_no_toi(t: ti.i32):
 
 @ti.kernel
 def compute_loss(t: ti.i32):
-    # loss[None] = -x[t,head_id][0]
-    loss[None] = (goal[None] - x[t, head_id]).norm()
+    loss[None] = -x[t,head_id][0]
+    #loss[None] = (goal[None] - x[t, head_id]).norm()
 
 
-gui = ti.GUI("Mass Spring Robot", (512, 512), background_color=0xFFFFFF)
+#gui = ti.GUI("Mass Spring Robot", (512, 512), background_color=0xFFFFFF)
+gui = ti.GUI(show_gui=False)
 
 
 def forward(output=None, visualize=True):
@@ -323,7 +324,8 @@ def forward(output=None, visualize=True):
                 gui.show()
 
     loss[None] = 0
-    compute_loss(steps - 1)
+    compute_loss(total_steps - 1)
+    return loss[None]
 
 
 @ti.kernel
@@ -463,8 +465,13 @@ def main():
     else:
         optimize(toi=True, visualize=True)
         clear()
-        forward("final{}".format(options.fname))
+        final_loss = forward("final{}".format(options.fname))
+        with open(options.fname.replace(".json", ".txt"), "w") as f:
+            f.write(str(final_loss))
 
+        x_np = x.to_numpy()[:, head_id, 0]
+        x_np = x_np - x_np[0]
+        np.savetxt(options.fname.replace(".json", "x.txt"), x_np, delimiter=',') 
 
 if __name__ == "__main__":
     main()
