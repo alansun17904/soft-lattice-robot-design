@@ -109,7 +109,7 @@ def sample_one_bfs(robot, starting_point):
     return tuple(seq)
 
 
-def generate_gsl_program(seq, num_blocks_least, num_blocks_most, distance):
+def generate_gsl_program(seq, num_blocks_least, num_blocks_most, distance, num_stair, height):
     """
     Given a sequence of points, generate the GSL program that will capture the
     semantics of that sequence.
@@ -143,14 +143,30 @@ def generate_gsl_program(seq, num_blocks_least, num_blocks_most, distance):
             
 
     distance_round = math.floor(distance*100)/100
-    
-    prompt_string0 = "<|endoftext|>Please generate robot design for walking from left to right on a plane:<|endoftext|>"
+    num_stair = num_stair - 1
 
-    prompt_string1 = f"<|endoftext|>Please generate robot design for walking from left to right on a plane using at least {num_blocks_least} blocks:<|endoftext|>"
-    prompt_string2 = f"<|endoftext|>Please generate robot design for walking at least {distance_round} distance from left to right on a plane using at least {num_blocks_least} blocks:<|endoftext|>"
-    prompt_string3 = f"<|endoftext|>Please generate robot design for walking at least {distance_round} distance from left to right on a plane:<|endoftext|>"
-    prompt_string4 = f"<|endoftext|>Please generate robot design for walking from left to right on a plane using at most {num_blocks_most} blocks:<|endoftext|>"
-    prompt_string5 = f"<|endoftext|>Please generate robot design for walking at least {distance_round} distance from left to right on a plane using at most {num_blocks_most} blocks:<|endoftext|>"
+    height2 = random.uniform(0, height)
+    height2 = round(height2, 3)
+    height = round(height, 3)
+    
+    
+    if num_stair == 1:
+        prompt_string0 = f"<|endoftext|>Please generate a robot design capable of walking from left to right down a stair of height at least {height}:<|endoftext|>"
+        prompt_string1 = f"<|endoftext|>Please generate robot design capable of walking from left to right down a stair of height at least {height} using at least {num_blocks_least} blocks:<|endoftext|>"
+        prompt_string2 = f"<|endoftext|>Please generate robot design capable of walking from left to right down a stair of height at least {height} using at least {num_blocks_least} blocks. The robot has to move at least {distance_round} distance to get down:<|endoftext|>"
+        prompt_string3 = f"<|endoftext|>Please generate robot design capable of walking from left to right down a stair of height at least {height}. The robot has to move at least {distance_round} distance to get down:<|endoftext|>"
+        prompt_string4 = f"<|endoftext|>Please generate robot design capable of walking from left to right down a stair of height at least {height} using at most {num_blocks_most} blocks:<|endoftext|>"
+        prompt_string5 = f"<|endoftext|>Please generate robot design capable of walking from left to right down a stair of height at least {height} using at most {num_blocks_most} blocks. The robot has to move at least {distance_round} distance to get down:<|endoftext|>"
+        prompt_string6 = f"<|endoftext|>Please generate robot design capable of walking from left to right down a stair of height at least {height} using at most {num_blocks_most} blocks. The robot has to move at least {distance_round} distance to get down:<|endoftext|>" 
+    else:
+        prompt_string0 = f"<|endoftext|>Please generate a robot design capable of walking from left to right down a stair of height at least {height} and then a stair of height at least {height2}:<|endoftext|>"
+        prompt_string1 = f"<|endoftext|>Please generate robot design capable of walking from left to right down a stair of height at least {height} and then a stair of height at least {height2} using at least {num_blocks_least} blocks:<|endoftext|>"
+        prompt_string2 = f"<|endoftext|>Please generate robot design capable of walking from left to right down a stair of height at least {height} and then a stair of height at least {height2} using at least {num_blocks_least} blocks. The robot has to move at least {distance_round} distance to get down:<|endoftext|>"
+        prompt_string3 = f"<|endoftext|>Please generate robot design capable of walking from left to right down a stair of height at least {height} and then a stair of height at least {height2}. The robot has to move at least {distance_round} distance to get down:<|endoftext|>"
+        prompt_string4 = f"<|endoftext|>Please generate robot design capable of walking from left to right down a stair of height at least {height} and then a stair of height at least {height2} using at most {num_blocks_most} blocks:<|endoftext|>"
+        prompt_string5 = f"<|endoftext|>Please generate robot design capable of walking from left to right down a stair of height at least {height} and then a stair of height at least {height2} using at most {num_blocks_most} blocks. The robot has to move at least {distance_round} distance to get down:<|endoftext|>"
+        prompt_string6 = f"<|endoftext|>Please generate robot design capable of walking from left to right down a stair of height at least {height} and then a stair of height at least {height2} using at most {num_blocks_most} blocks. The robot has to move at least {distance_round} distance to get down:<|endoftext|>" 
+
 
     return_seq = []
 
@@ -160,6 +176,8 @@ def generate_gsl_program(seq, num_blocks_least, num_blocks_most, distance):
     return_seq.extend (["".join([prompt_string3] + [i for i in program if i.startswith("create")] + [i for i in program if not i.startswith("create")] + ["<|endoftext|>"])])
     return_seq.extend (["".join([prompt_string4] + [i for i in program if i.startswith("create")] + [i for i in program if not i.startswith("create")] + ["<|endoftext|>"])])
     return_seq.extend (["".join([prompt_string5] + [i for i in program if i.startswith("create")] + [i for i in program if not i.startswith("create")] + ["<|endoftext|>"])])
+    return_seq.extend (["".join([prompt_string6] + [i for i in program if i.startswith("create")] + [i for i in program if not i.startswith("create")] + ["<|endoftext|>"])])
+    #return_seq.extend (["".join([prompt_string7] + [i for i in program if i.startswith("create")] + [i for i in program if not i.startswith("create")] + ["<|endoftext|>"])])
 
     return return_seq
 
@@ -192,11 +210,14 @@ def main():
         for line in f.readlines():
             # replace all `nan` values with 1000
             line = re.sub("nan", "1000", line)
-            name, loss = (
+            name, loss, num_stairs, stair_height = (
                 line.split(", ")[0],
-                float(line.split(", ")[-1].strip("\n"))
+                float(line.split(", ")[1]),
+                int(line.split(", ")[2])-1,
+                float(line.split(", ")[3].strip("\n"))
             )
-            losses.append((name, loss))
+            losses.append((name, loss, num_stairs, stair_height))
+
     losses.sort(key=lambda x: x[0])
     for v in losses:
         
@@ -213,10 +234,12 @@ def main():
         robots.append(robot[0])
     
     robots = [np.flip(robot, axis=0) for robot in robots]
-        
+    num_stairs = [v[2] for v in losses]
+    stair_height = [v[3] for v in losses]    
     losses = [v[1] for v in losses]
+
     
-    target_robots = sorted(zip(losses, robots), key=lambda x: x[0])[
+    target_robots = sorted(zip(losses, robots, num_stairs, stair_height), key=lambda x: x[0])[
             -int(options.top_p * len(robots)):
     ]
 
@@ -224,6 +247,8 @@ def main():
 
 
     for robot in tqdm.tqdm(target_robots):
+        if robot[0] <= -3:
+            continue
         num_blocks = np.count_nonzero(robot[1]==1)
         seqs = bfs_one_robot(robot[1], N=options.N)
         #programs.extend([generate_gsl_program(s, num_blocks, robots[0]) for s in seqs])
@@ -235,9 +260,9 @@ def main():
         # Iterate over seqs
         for s in random.sample(seqs,5): 
             if (iters == 0):
-                distance = robot[0]
+                distance = robot[0] - 0.5
             else:
-                distance = random.uniform(0, robot[0])
+                distance = random.uniform(0, robot[0]-0.5)
             
             print (distance)
             if (max_blk_seq == iters):
@@ -247,7 +272,10 @@ def main():
                 blk_input_least = random.randint(1, num_blocks)
                 blk_input_most = random.randint(num_blocks, num_blocks+5)
             
-            gsl_program = generate_gsl_program(s, blk_input_least, blk_input_most, distance) 
+            num_stair = robot[2]
+            height = robot[3]
+            
+            gsl_program = generate_gsl_program(s, blk_input_least, blk_input_most, distance, num_stair, height) 
             print (gsl_program)
             programs.extend(gsl_program)
             iters += 1

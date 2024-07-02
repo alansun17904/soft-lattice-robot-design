@@ -53,13 +53,13 @@ parser.add_argument(
     "--N",
     type=int,
     help="the number of programs to generate per robot",
-    default=5,
+    default=3,
 )
 options = parser.parse_args()
 
 
-def bfs_one_robot(robot, N=1):
-    """Given an NxN binary matrix `robot` generate (non-zero entries) x N number
+def bfs_one_robot(robot,outputN, N=1):
+    """Given an binary matrix `robot` generate (non-zero entries) x N number
     of bfs search sequences over the matrix.
     """
     seqs = []
@@ -69,7 +69,7 @@ def bfs_one_robot(robot, N=1):
         seqs.extend(
             bfs_from_starting(robot, starting_point=(x_start[i], y_start[i]), N=N)
         )
-    return seqs
+    return random.choices(seqs,k=outputN)
 
 
 def bfs_from_starting(robot, starting_point=(0, 0), N=10):
@@ -192,11 +192,18 @@ def main():
     losses.sort(key=lambda x: x[0])
     for v in losses:
         item = (v[0].strip("[").strip("]").split(". "))
+        robot = []
         for a in item:
-            robots.append(int(a.strip(".")))
-    robots = [robots[x:x+3] for x in range(0, len(robots), 3)]
-    robots = [robots[x:x+3] for x in range(0, len(robots), 3)]
+            robot.append(int(a.strip(".")))
+        
+
+        row_size = int(np.sqrt(len(robot)))
+        robot = [robot[x:x+row_size] for x in range(0, len(robot), row_size)]
+        robot = [robot[x:x+row_size] for x in range(0, len(robot), row_size)]
+        
+        robots.append(robot[0])
     
+
     robots = [np.flip(robot, axis=0) for robot in robots]
         
     losses = [v[1] for v in losses]
@@ -207,16 +214,13 @@ def main():
 
     print (target_robots)
 
-
     for robot in tqdm.tqdm(target_robots):
-        seqs = bfs_one_robot(robot[1], N=options.N)
+        seqs = bfs_one_robot(robot[1], outputN=options.N)
         robot2 = random.choice(target_robots)
-        seqs2 = bfs_one_robot(robot2[1], N=options.N)
+        seqs2 = bfs_one_robot(robot2[1], outputN=options.N)
         r1 = robot[0]
         r2 = robot2[0]
         programs.extend([generate_comparison(s1, s2, r1, r2) for (s1, s2) in zip(seqs, seqs2)]) 
-    
-    
     print(
         tabulate(
             [

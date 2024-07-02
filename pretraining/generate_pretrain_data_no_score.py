@@ -145,21 +145,9 @@ def generate_gsl_program(seq, num_blocks_least, num_blocks_most, distance):
     distance_round = math.floor(distance*100)/100
     
     prompt_string0 = "<|endoftext|>Please generate robot design for walking from left to right on a plane:<|endoftext|>"
-
-    prompt_string1 = f"<|endoftext|>Please generate robot design for walking from left to right on a plane using at least {num_blocks_least} blocks:<|endoftext|>"
-    prompt_string2 = f"<|endoftext|>Please generate robot design for walking at least {distance_round} distance from left to right on a plane using at least {num_blocks_least} blocks:<|endoftext|>"
-    prompt_string3 = f"<|endoftext|>Please generate robot design for walking at least {distance_round} distance from left to right on a plane:<|endoftext|>"
-    prompt_string4 = f"<|endoftext|>Please generate robot design for walking from left to right on a plane using at most {num_blocks_most} blocks:<|endoftext|>"
-    prompt_string5 = f"<|endoftext|>Please generate robot design for walking at least {distance_round} distance from left to right on a plane using at most {num_blocks_most} blocks:<|endoftext|>"
-
     return_seq = []
 
     return_seq.extend (["".join([prompt_string0] + [i for i in program if i.startswith("create")] + [i for i in program if not i.startswith("create")] + ["<|endoftext|>"])])
-    return_seq.extend (["".join([prompt_string1] + [i for i in program if i.startswith("create")] + [i for i in program if not i.startswith("create")] + ["<|endoftext|>"])])
-    return_seq.extend (["".join([prompt_string2] + [i for i in program if i.startswith("create")] + [i for i in program if not i.startswith("create")] + ["<|endoftext|>"])])
-    return_seq.extend (["".join([prompt_string3] + [i for i in program if i.startswith("create")] + [i for i in program if not i.startswith("create")] + ["<|endoftext|>"])])
-    return_seq.extend (["".join([prompt_string4] + [i for i in program if i.startswith("create")] + [i for i in program if not i.startswith("create")] + ["<|endoftext|>"])])
-    return_seq.extend (["".join([prompt_string5] + [i for i in program if i.startswith("create")] + [i for i in program if not i.startswith("create")] + ["<|endoftext|>"])])
 
     return return_seq
 
@@ -192,18 +180,16 @@ def main():
         for line in f.readlines():
             # replace all `nan` values with 1000
             line = re.sub("nan", "1000", line)
-            name, loss = (
-                line.split(", ")[0],
-                float(line.split(", ")[-1].strip("\n"))
-            )
+            name = line.strip("\n")
+            loss = 0
             losses.append((name, loss))
-    losses.sort(key=lambda x: x[0])
+    #losses.sort(key=lambda x: x[0])
     for v in losses:
         
         item = (v[0].strip("[").strip("]").split(". "))
         robot = []
         for a in item:
-            robot.append(int(a.strip(".")))
+            robot.append(int(a.replace(".", "")))
         
 
         row_size = int(np.sqrt(len(robot)))
@@ -233,7 +219,7 @@ def main():
         if (len(seqs) < 5):
             seqs = seqs * 5
         # Iterate over seqs
-        for s in random.sample(seqs,5): 
+        for s in random.sample(seqs,1): 
             if (iters == 0):
                 distance = robot[0]
             else:
