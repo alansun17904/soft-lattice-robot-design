@@ -6,6 +6,7 @@ import sys
 import torch
 import numpy as np
 import random
+import os
 
 sys.path.append('../')
 import simulation.generate_robot_config as generate_robot_config
@@ -27,11 +28,11 @@ def list_to_tensor(state):
     assert len(state) == tensor.shape[0], f"state length is {len(state)} instead of {tensor.shape}"
     return tensor
 
-def to_grid(tensor):
-    grid = [[0 for i in range(n_grid)] for j in range(m_grid)]
-    for i in range(n_grid):
-        for j in range(m_grid):
-            grid[j][i] = int(tensor[(2-j) * n_grid + i])
+def to_grid(tensor, n = n_grid, m=m_grid):
+    grid = [[0 for i in range(n)] for j in range(m)]
+    for i in range(n):
+        for j in range(m):
+            grid[j][i] = int(tensor[(m-j-1) * n + i])
     return grid
 
 def to_binarystring(grid):
@@ -221,7 +222,7 @@ def increment_state(tensor, best_act):
     assert len(state) == n_grid * m_grid, f"state length is {len(state)} instead of {n_grid * m_grid}. Length of tensor is {tensor.shape}"
     return list_to_tensor(state)
 
-def calculate_reward(state):
+def calculate_reward(state, n, obj, target_distance):
     """
     state: binary string of length n_grid * m_grid representing robot positions
 
@@ -229,18 +230,20 @@ def calculate_reward(state):
     #TODO: do a check here to access a dictionary to get reward
 
     # return 0
-
-    f = open("all_configs_rewards.txt", "r")
-    for line in f:
-        if line.split(",")[0] == str(state):
-            reward = float(line.split(",")[1])
-            print ("Reward form dict", reward)
-            return reward #(reward/0.3 - 1)
+    
+    # this block is reads lines from previously generated configurations 
+    #f = open("./data/configs/all_configs_rewards.txt", "r")
+    #print (state)
+    #for line in f:
+    #    if line.split(",")[0] == str(state):
+    #        reward = float(line.split(",")[1])
+    #        print ("Reward form dict", reward)
+    #        return reward
     # test
     #return 0 
     
     # transfer to json configuration
-    grid = to_grid(state)
+    grid = to_grid(state, n, n)
     r = generate_robot_config.Robot(grid)
 
     config = {
@@ -249,27 +252,227 @@ def calculate_reward(state):
         "angle_springs": r.angle_springs,
     }
 
-    name = random.randint(1000000,9999999)
+    binary_string = ''.join(state.astype(int).astype(str))
+    name = int(binary_string, 2)
+    print (name)
     json.dump(config, open(f"./robot/{name}.json", "w+"))
     
     
     # Construct the command as you would type it in the terminal
-    command = ["python3.8", "../simulation/mass_spring.py", f"./robot/{name}.json", "train", "losses-test.json", "flat.png" ] 
+    #
+    if obj == 11:
+        command = ["python3.8", "../simulation/mass_spring.py", f"./robot/{name}.json", "train", "losses-test.json", "flat.png" ]
+    elif obj == 12:
+        command = ["python3.8", "../simulation/mass_spring.py", f"./robot/{name}.json", "train", "losses-test.json", "flat.png", "--steps=4096"]
+    elif obj == 31:
+        command = ["python3.8", "../simulation/mass_spring_reverse.py", f"./robot/{name}.json", "train", "losses-test.json", "flat.png", "--steps=4096"]
+    else:
+        return 0
+        
     # Run the command
-    result = subprocess.run(command, capture_output=True, text=True)
+    command = " ".join(command)
+    result = subprocess.run(command, capture_output=True, text=True, shell=True)
     # Check if the execution was successful
     if result.returncode == 0:
         print("Script executed successfully!")
-        #print("Output:", result.stdout)
+    else:
+        print(result.stderr)
+        print("Script execution failed!") 
+        return -1, -1
+    
+    file_path = f'./robot/{name}.txt'
+    
+    if os.path.exists(file_path):
+        with open(file_path, 'r') as file:
+            # Read the first line
+            first_line = file.readline()
+    else:
+        first_line = 2
 
+
+    if (obj == 11 or 12):
+        file_path = f'./robot/{name}x.txt'
+        t = -1
+        with open(file_path, 'r') as file:
+            for line_number, line in enumerate(file, start=1):
+                try:
+                    value = float(line.strip())
+                    if value > target_distance:
+                        t = line_number * 0.004
+                        break
+                except ValueError:
+                    continue  # Skip lines that cannot be converted to float
+    elif (obj == 31 or obj == 32):
+        file_path = f'./robot/{name}x.txt'
+        t = -1
+        with open(file_path, 'r') as file:
+            for line_number, line in enumerate(file, start=1):
+                try:
+                    value = float(line.strip())
+                    if value > -target_distance:
+                        t = line_number * 0.004
+                        break
+                except ValueError:
+                    continue  # Skip lines that cannot be converted to float
+
+    if obj == 11 or obj == 12:
+        return - float(first_line), t
+    if obj == 31 or obj == 32:
+        return 1 - float(first_line), t
+    return 10000
+
+def calculate_reward_stairs(state, n, num_stairs, target_distance, h1, h2):
+    """
+    state: binary string of length n * n representing robot positions
+
+    """
+    #TODO: do a check here to access a dictionary to get reward
+
+    # return 0
+    
+    # this block is reads lines from previously generated configurations 
+    #f = open("./data/configs/all_configs_rewards.txt", "r")
+    #print (state)
+    #for line in f:
+    #    if line.split(",")[0] == str(state):
+    #        reward = float(line.split(",")[1])
+    #        print ("Reward form dict", reward)
+    #        return reward
+    # test
+    #return 0 
+    
+    # transfer to json configuration
+    grid = to_grid(state, n, n)
+    r = generate_robot_config.Robot(grid)
+
+    config = {
+        "objects": r.objects,
+        "springs": r.springs,
+        "angle_springs": r.angle_springs,
+    }
+
+    binary_string = ''.join(state.astype(int).astype(str))
+    name = int(binary_string, 2)
+    print (name)
+    json.dump(config, open(f"./robot/{name}.json", "w+"))
+    
+    if (num_stairs == 2):
+
+        # Construct the command as you would type it in the terminal
+        command = ["python3.8", "../simulation/mass_spring_stair.py", f"./robot/{name}.json", \
+        "train", "losses-test.json", "stair.png", "-stairs 2", "-stair-widths 0.4 1.2", f"-stair-heights 0.1 {0.1-h1}"] 
+    
+    if (num_stairs == 3):
+        # Construct the command as you would type it in the terminal
+        command = ["python3.8", "../simulation/mass_spring_stair.py", f"./robot/{name}.json", \
+        "train", "losses-test.json", "stair.png", "-stairs 3", "-stair-widths 0.4 0.3 1.2", f"-stair-heights 0.1 {0.1-h1} {0.1-h1-h2}"] 
+
+    # Run the command
+    command = " ".join(command)
+    result = subprocess.run(command, capture_output=True, text=True, shell=True)
+    # Check if the execution was successful
+    if result.returncode == 0:
+        print("Script executed successfully!")
     else:
         print("Script execution failed!")
         print("Error:", result.stderr)
+        return -1, -1
+    
+    
+    file_path = f'./robot/{name}.txt'
 
-    print ("Reward", -float(result.stdout.split("\n")[-3].split(" ")[-1]))
-    return (-float(result.stdout.split("\n")[-3].split(" ")[-1]))
-    return 2 - 2 / (1 + np.exp(-min(float(result.stdout.split("\n")[-2]), 20)))
-    #return -0.1 * min(float(result.stdout.split("\n")[-2]), 20) + 1
+    if os.path.exists(file_path):
+        with open(file_path, 'r') as file:
+            # Read the first line
+            first_line = file.readline()
+    else:
+        first_line = 1
+
+    file_path = f'./robot/{name}x.txt'
+    t = -1
+    with open(file_path, 'r') as file:
+        for line_number, line in enumerate(file, start=1):
+            try:
+                value = float(line.strip())
+                if value > target_distance:
+                    t = line_number * 0.004
+                    break
+            except ValueError:
+                continue  # Skip lines that cannot be converted to float
+
+
+    
+    return -float(first_line), t
+
+def calculate_reward_random_stairs(state, n):
+    """
+    state: binary string of length n * n representing robot positions
+
+    """
+    #TODO: do a check here to access a dictionary to get reward
+
+    # return 0
+    
+    # this block is reads lines from previously generated configurations 
+    #f = open("./data/configs/all_configs_rewards.txt", "r")
+    #print (state)
+    #for line in f:
+    #    if line.split(",")[0] == str(state):
+    #        reward = float(line.split(",")[1])
+    #        print ("Reward form dict", reward)
+    #        return reward
+    # test
+    #return 0 
+    
+    # transfer to json configuration
+    grid = to_grid(state, n, n)
+    r = generate_robot_config.Robot(grid)
+
+    config = {
+        "objects": r.objects,
+        "springs": r.springs,
+        "angle_springs": r.angle_springs,
+    }
+
+    binary_string = ''.join(state.astype(int).astype(str))
+    name = int(binary_string, 2)
+    print (name)
+    json.dump(config, open(f"./robot/{name}.json", "w+"))
+    
+    num_stairs = random.randint(2, 3)
+    stair_height = random.uniform(0.01, 0.05)
+    if (num_stairs == 2):
+
+        # Construct the command as you would type it in the terminal
+        command = ["python3", "/home/matt/soft-lattice-robot-design/simulation/mass_spring_stair.py", f"/home/matt/soft-lattice-robot-design/pretraining/robot/{name}.json", \
+        "train", "losses-test.json", "stair.png", "-stairs 2", "-stair-widths 0.4 0.8", f"-stair-heights 0.1 {0.1-stair_height}"] 
+    
+    if (num_stairs == 3):
+        # Construct the command as you would type it in the terminal
+        command = ["python3", "/home/matt/soft-lattice-robot-design/simulation/mass_spring_stair.py", f"/home/matt/soft-lattice-robot-design/pretraining/robot/{name}.json", \
+        "train", "losses-test.json", "stair.png", "-stairs 3", "-stair-widths 0.4 0.3 0.4", f"-stair-heights 0.1 {0.1-stair_height} {0.1-2*stair_height}"] 
+
+    # Run the command
+    command = " ".join(command)
+    result = subprocess.run(command, capture_output=True, text=True, shell=True)
+    # Check if the execution was successful
+    if result.returncode == 0:
+        print("Script executed successfully!")
+    else:
+        print("Script execution failed!")
+        print("Error:", result.stderr)
+    
+    
+    file_path = f'./robot/{name}.txt'
+
+    if os.path.exists(file_path):
+        with open(file_path, 'r') as file:
+            # Read the first line
+            first_line = file.readline()
+    else:
+        first_line = "5"
+    return (1.5 - float(first_line)), num_stairs, stair_height
+
 
 def count_occurances():
     counts = {}
