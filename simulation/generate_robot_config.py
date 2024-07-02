@@ -76,7 +76,7 @@ class Robot:
         object already exists. If it does, then return its index. Otherwise,
         add the object to the list and return its new index.
         """
-        x, y = i * 0.05 + 0.1, j * 0.05 + 0.1
+        x, y = i * 0.05 + 0.1, j * 0.05 + 0.1 + 0.001
         # check if already an object
         for index, obj in enumerate(self.objects):
             if obj == [x, y]:

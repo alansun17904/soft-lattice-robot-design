@@ -109,14 +109,14 @@ def sample_one_bfs(robot, starting_point):
     return tuple(seq)
 
 
-def generate_gsl_program(seq, num_blocks_least, num_blocks_most, distance):
+def generate_gsl_program(seq):
     """
     Given a sequence of points, generate the GSL program that will capture the
     semantics of that sequence.
     """
     block_names = {seq[0][0]: 0}
     program = [
-        "create block0; ",
+        "create block0",
     ]
     for i in range(1, len(seq)):
         prev_coor, next_coor = seq[i]
@@ -126,42 +126,36 @@ def generate_gsl_program(seq, num_blocks_least, num_blocks_most, distance):
             assert RuntimeError("Sequence of block generations is invalid.")
         block_names[next_coor] = i
         #program.extend([f"<def> block{i}"])
-        program.extend([f"create block{i}; "])
+        program.extend([f"create block{i}"])
 
         direction = get_direction(prev_coor, next_coor)
-        if i == len(seq) - 1:
+        program.append(
+            #f"<add> block{block_names[prev_coor]} block{block_names[next_coor]} {direction}"
+            f"place block{block_names[next_coor]} {direction} of block{block_names[prev_coor]}"
+        )
+    return "; ".join([i for i in program if i.startswith("create")] + [i for i in program if not i.startswith("create")])
 
-            program.append(
-                #f"<add> block{block_names[prev_coor]} block{block_names[next_coor]} {direction}"
-                f"place block{block_names[next_coor]} {direction} of block{block_names[prev_coor]}."
-            )
-        else:
-             program.append(
-                #f"<add> block{block_names[prev_coor]} block{block_names[next_coor]} {direction}"
-                f"place block{block_names[next_coor]} {direction} of block{block_names[prev_coor]}; "
-            )
-            
+def generate_comparison(seq1, seq2, r1, r2):
+    program = [
+        "<|endoftext|> We are designing a soft modular robot for walking down stairs from left to right. Choose the faster congfiguration between the following two <|endoftext|>" 
+    ]
 
-    distance_round = math.floor(distance*100)/100
+    seqA = generate_gsl_program(seq1)
+    seqB = generate_gsl_program(seq2)
     
-    prompt_string0 = "<|endoftext|>Please generate robot design for walking from left to right on a plane:<|endoftext|>"
+    case = random.randint(0,1)
+    
+    if (case == 0):
+        program.extend(["(a)", seqA, "<|endoftext|> (b)", seqB, "<|endoftext|>"])
+    else:
+        program.extend(["(a)", seqB, "<|endoftext|> (b)", seqA, "<|endoftext|>"])
 
-    prompt_string1 = f"<|endoftext|>Please generate robot design for walking from left to right on a plane using at least {num_blocks_least} blocks:<|endoftext|>"
-    prompt_string2 = f"<|endoftext|>Please generate robot design for walking at least {distance_round} distance from left to right on a plane using at least {num_blocks_least} blocks:<|endoftext|>"
-    prompt_string3 = f"<|endoftext|>Please generate robot design for walking at least {distance_round} distance from left to right on a plane:<|endoftext|>"
-    prompt_string4 = f"<|endoftext|>Please generate robot design for walking from left to right on a plane using at most {num_blocks_most} blocks:<|endoftext|>"
-    prompt_string5 = f"<|endoftext|>Please generate robot design for walking at least {distance_round} distance from left to right on a plane using at most {num_blocks_most} blocks:<|endoftext|>"
-
-    return_seq = []
-
-    return_seq.extend (["".join([prompt_string0] + [i for i in program if i.startswith("create")] + [i for i in program if not i.startswith("create")] + ["<|endoftext|>"])])
-    return_seq.extend (["".join([prompt_string1] + [i for i in program if i.startswith("create")] + [i for i in program if not i.startswith("create")] + ["<|endoftext|>"])])
-    return_seq.extend (["".join([prompt_string2] + [i for i in program if i.startswith("create")] + [i for i in program if not i.startswith("create")] + ["<|endoftext|>"])])
-    return_seq.extend (["".join([prompt_string3] + [i for i in program if i.startswith("create")] + [i for i in program if not i.startswith("create")] + ["<|endoftext|>"])])
-    return_seq.extend (["".join([prompt_string4] + [i for i in program if i.startswith("create")] + [i for i in program if not i.startswith("create")] + ["<|endoftext|>"])])
-    return_seq.extend (["".join([prompt_string5] + [i for i in program if i.startswith("create")] + [i for i in program if not i.startswith("create")] + ["<|endoftext|>"])])
-
-    return return_seq
+    if (r1 > r2):
+        program.extend(["(a)", seqA, "<|endoftext|>"])
+    else:
+        program.extend(["(b)", seqB, "<|endoftext|>"])
+    
+    return "".join(program)
 
 
 def get_direction(start, end):
@@ -192,11 +186,14 @@ def main():
         for line in f.readlines():
             # replace all `nan` values with 1000
             line = re.sub("nan", "1000", line)
-            name, loss = (
+            name, loss, num_stairs, stair_height = (
                 line.split(", ")[0],
-                float(line.split(", ")[-1].strip("\n"))
+                float(line.split(", ")[1]),
+                int(line.split(", ")[2])-1,
+                float(line.split(", ")[3].strip("\n"))
             )
-            losses.append((name, loss))
+            losses.append((name, loss, num_stairs, stair_height))
+
     losses.sort(key=lambda x: x[0])
     for v in losses:
         
@@ -213,10 +210,12 @@ def main():
         robots.append(robot[0])
     
     robots = [np.flip(robot, axis=0) for robot in robots]
-        
+    num_stairs = [v[2] for v in losses]
+    stair_height = [v[3] for v in losses]    
     losses = [v[1] for v in losses]
+
     
-    target_robots = sorted(zip(losses, robots), key=lambda x: x[0])[
+    target_robots = sorted(zip(losses, robots, num_stairs, stair_height), key=lambda x: x[0])[
             -int(options.top_p * len(robots)):
     ]
 
@@ -224,33 +223,17 @@ def main():
 
 
     for robot in tqdm.tqdm(target_robots):
+        if robot[0] <= -3:
+            continue
         num_blocks = np.count_nonzero(robot[1]==1)
         seqs = bfs_one_robot(robot[1], N=options.N)
+        robot2 = random.choice(target_robots)
+        seqs2 = bfs_one_robot(robot2[1], N=options.N)
+        r1 = robot[0]
+        r2 = robot2[0]
+        if (robot[2] == robot2[2]):
+            programs.extend([generate_comparison(s1, s2, r1, r2) for (s1, s2) in zip(seqs, seqs2)])
         #programs.extend([generate_gsl_program(s, num_blocks, robots[0]) for s in seqs])
-        max_blk_seq = random.randint(0, 4)
-        iters = 0
-        print (type(seqs))
-        if (len(seqs) < 5):
-            seqs = seqs * 5
-        # Iterate over seqs
-        for s in random.sample(seqs,5): 
-            if (iters == 0):
-                distance = robot[0]
-            else:
-                distance = random.uniform(0, robot[0])
-            
-            print (distance)
-            if (max_blk_seq == iters):
-                blk_input_least = num_blocks
-                blk_input_most = num_blocks
-            else:
-                blk_input_least = random.randint(1, num_blocks)
-                blk_input_most = random.randint(num_blocks, num_blocks+5)
-            
-            gsl_program = generate_gsl_program(s, blk_input_least, blk_input_most, distance) 
-            print (gsl_program)
-            programs.extend(gsl_program)
-            iters += 1
     
     
     print(

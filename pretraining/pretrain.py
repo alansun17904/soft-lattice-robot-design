@@ -4,14 +4,15 @@ import math
 import json
 import argparse
 import torch
+import random
 from transformers import DataCollatorForLanguageModeling
 from transformers import Trainer, TrainingArguments
-
 from transformers import GPTNeoForCausalLM, GPT2Tokenizer 
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
-    "programs_file", type=str, help="file path of all of the program texts"
+    "programs_file", type=str, nargs='+', help="file path of all of the program texts"
 )
 parser.add_argument("pretrain_model_name", type=str, help="pretraining model name")
 parser.add_argument(
@@ -33,11 +34,18 @@ model = GPTNeoForCausalLM.from_pretrained("EleutherAI/gpt-neo-1.3B")
 tokenizer = GPT2Tokenizer.from_pretrained("EleutherAI/gpt-neo-1.3B")
 tokenizer.add_special_tokens({'pad_token': '[PAD]'})
 data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
-data = json.load(open(options.programs_file, "r"))
+data = []
+for file in options.programs_file:
+    with open(file, 'r') as f:
+        data += json.load(f)
+
+
+#data = json.load(open(options.programs_file, "r"))
 
 #tokenizer.add_tokens(["<def>", "<add>", "<n>", "<b>", "<e>", "<w>", "|"])
 model.resize_token_embeddings(len(tokenizer))
 # split the data into train and test
+random.shuffle(data)
 train = data[: int(0.8 * len(data))]
 test = data[int(0.8 * len(data)) :]
 print(f"Train: {len(train)} programs, Test: {len(test)} programs")
@@ -66,7 +74,14 @@ test_encodings = [
     for i in range(len(test_encodings["input_ids"]))
 ]
 
-
+#def compute_metrics(pred):
+#    references = pred.label_ids
+#    generated_texts = pred.predictions
+#
+#    #results = perplexity.compute(model_id=model, predictions=generated_texts)
+#    return {
+#            'perplexity': math.exp(eval_results['eval_loss'])
+#    }
 
 training_args = TrainingArguments(
     output_dir=options.output_directory,
@@ -78,7 +93,8 @@ training_args = TrainingArguments(
     weight_decay=0.01,
     per_device_train_batch_size=2,
     per_device_eval_batch_size=2,
-    save_steps = 0.2
+    save_steps = 0.5,
+    fp16 = True
 )
 
 trainer = Trainer(
@@ -87,6 +103,7 @@ trainer = Trainer(
     data_collator=data_collator,
     train_dataset=train_encodings,
     eval_dataset=test_encodings,
+    #compute_metrics=compute_metrics
 )
 
 trainer.train()

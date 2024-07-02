@@ -109,7 +109,7 @@ def sample_one_bfs(robot, starting_point):
     return tuple(seq)
 
 
-def generate_gsl_program(seq, num_blocks_least, num_blocks_most, distance):
+def generate_gsl_program(seq, aspect_ratio, distance):
     """
     Given a sequence of points, generate the GSL program that will capture the
     semantics of that sequence.
@@ -146,20 +146,14 @@ def generate_gsl_program(seq, num_blocks_least, num_blocks_most, distance):
     
     prompt_string0 = "<|endoftext|>Please generate robot design for walking from left to right on a plane:<|endoftext|>"
 
-    prompt_string1 = f"<|endoftext|>Please generate robot design for walking from left to right on a plane using at least {num_blocks_least} blocks:<|endoftext|>"
-    prompt_string2 = f"<|endoftext|>Please generate robot design for walking at least {distance_round} distance from left to right on a plane using at least {num_blocks_least} blocks:<|endoftext|>"
-    prompt_string3 = f"<|endoftext|>Please generate robot design for walking at least {distance_round} distance from left to right on a plane:<|endoftext|>"
-    prompt_string4 = f"<|endoftext|>Please generate robot design for walking from left to right on a plane using at most {num_blocks_most} blocks:<|endoftext|>"
-    prompt_string5 = f"<|endoftext|>Please generate robot design for walking at least {distance_round} distance from left to right on a plane using at most {num_blocks_most} blocks:<|endoftext|>"
+    prompt_string1 = f"<|endoftext|>Please generate robot design for walking from left to right on a plane. The robot we want should have aspect ratio {aspect_ratio}:<|endoftext|>"
+    prompt_string2 = f"<|endoftext|>Please generate robot design for walking at least {distance_round} distance from left to right on a plane. The robot  we want should have aspect ratio {aspect_ratio}:<|endoftext|>"
 
     return_seq = []
 
     return_seq.extend (["".join([prompt_string0] + [i for i in program if i.startswith("create")] + [i for i in program if not i.startswith("create")] + ["<|endoftext|>"])])
     return_seq.extend (["".join([prompt_string1] + [i for i in program if i.startswith("create")] + [i for i in program if not i.startswith("create")] + ["<|endoftext|>"])])
     return_seq.extend (["".join([prompt_string2] + [i for i in program if i.startswith("create")] + [i for i in program if not i.startswith("create")] + ["<|endoftext|>"])])
-    return_seq.extend (["".join([prompt_string3] + [i for i in program if i.startswith("create")] + [i for i in program if not i.startswith("create")] + ["<|endoftext|>"])])
-    return_seq.extend (["".join([prompt_string4] + [i for i in program if i.startswith("create")] + [i for i in program if not i.startswith("create")] + ["<|endoftext|>"])])
-    return_seq.extend (["".join([prompt_string5] + [i for i in program if i.startswith("create")] + [i for i in program if not i.startswith("create")] + ["<|endoftext|>"])])
 
     return return_seq
 
@@ -181,6 +175,24 @@ def get_direction(start, end):
     elif end[1] - start[1] < 0:
         #return "<w>"
         return "to the left"
+
+def calculate_aspect_ratio(grid):
+    # Find the bounding box of the robot
+    grid = np.array(grid)
+    non_empty_columns = np.where(grid.any(axis=0))[0]
+    non_empty_rows = np.where(grid.any(axis=1))[0]
+    
+    if non_empty_columns.size == 0 or non_empty_rows.size == 0:
+        return 0  # No blocks in the grid
+    
+    min_col, max_col = non_empty_columns[0], non_empty_columns[-1]
+    min_row, max_row = non_empty_rows[0], non_empty_rows[-1]
+    
+    width = max_col - min_col + 1
+    height = max_row - min_row + 1
+    
+    aspect_ratio = width / height if height != 0 else 0
+    return aspect_ratio
 
 
 def main():
@@ -227,12 +239,16 @@ def main():
         num_blocks = np.count_nonzero(robot[1]==1)
         seqs = bfs_one_robot(robot[1], N=options.N)
         #programs.extend([generate_gsl_program(s, num_blocks, robots[0]) for s in seqs])
-        max_blk_seq = random.randint(0, 4)
         iters = 0
         print (type(seqs))
         if (len(seqs) < 5):
             seqs = seqs * 5
         # Iterate over seqs
+    
+        
+        aspect_ratio = calculate_aspect_ratio(robot[1])
+        print (robot[1])
+        print (aspect_ratio)
         for s in random.sample(seqs,5): 
             if (iters == 0):
                 distance = robot[0]
@@ -240,14 +256,8 @@ def main():
                 distance = random.uniform(0, robot[0])
             
             print (distance)
-            if (max_blk_seq == iters):
-                blk_input_least = num_blocks
-                blk_input_most = num_blocks
-            else:
-                blk_input_least = random.randint(1, num_blocks)
-                blk_input_most = random.randint(num_blocks, num_blocks+5)
             
-            gsl_program = generate_gsl_program(s, blk_input_least, blk_input_most, distance) 
+            gsl_program = generate_gsl_program(s, aspect_ratio, distance) 
             print (gsl_program)
             programs.extend(gsl_program)
             iters += 1

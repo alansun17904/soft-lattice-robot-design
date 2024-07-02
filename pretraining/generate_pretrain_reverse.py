@@ -38,7 +38,12 @@ from tabulate import tabulate
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
-    "input_file",
+    "input_file1",
+    type=str,
+    help="file path of all_configs_rewards.txt file that contains the robots and rewards",
+)
+parser.add_argument(
+    "input_file2",
     type=str,
     help="file path of all_configs_rewards.txt file that contains the robots and rewards",
 )
@@ -109,7 +114,7 @@ def sample_one_bfs(robot, starting_point):
     return tuple(seq)
 
 
-def generate_gsl_program(seq, num_blocks_least, num_blocks_most, distance):
+def generate_gsl_program(seq, num_blocks_least, num_blocks_most, distance_forward, distance_back):
     """
     Given a sequence of points, generate the GSL program that will capture the
     semantics of that sequence.
@@ -142,15 +147,16 @@ def generate_gsl_program(seq, num_blocks_least, num_blocks_most, distance):
             )
             
 
-    distance_round = math.floor(distance*100)/100
+    distance_fwd_round = math.floor(distance_forward*100)/100
+    distance_bkd_round = math.floor(distance_back*100)/100
     
-    prompt_string0 = "<|endoftext|>Please generate robot design for walking from left to right on a plane:<|endoftext|>"
+    prompt_string0 = "<|endoftext|>Please generate robot design for walking from left to right on a plane and then back towards the starting point which walks the longest distance within simulation time:<|endoftext|>"
 
-    prompt_string1 = f"<|endoftext|>Please generate robot design for walking from left to right on a plane using at least {num_blocks_least} blocks:<|endoftext|>"
-    prompt_string2 = f"<|endoftext|>Please generate robot design for walking at least {distance_round} distance from left to right on a plane using at least {num_blocks_least} blocks:<|endoftext|>"
-    prompt_string3 = f"<|endoftext|>Please generate robot design for walking at least {distance_round} distance from left to right on a plane:<|endoftext|>"
-    prompt_string4 = f"<|endoftext|>Please generate robot design for walking from left to right on a plane using at most {num_blocks_most} blocks:<|endoftext|>"
-    prompt_string5 = f"<|endoftext|>Please generate robot design for walking at least {distance_round} distance from left to right on a plane using at most {num_blocks_most} blocks:<|endoftext|>"
+    prompt_string1 = f"<|endoftext|>Please generate robot design for walking from left to right on a plane and then  back towards the starting point which walks the longest distance within simulation time using at least {num_blocks_least} blocks:<|endoftext|>"
+    prompt_string2 = f"<|endoftext|>Please generate robot design for walking at least {distance_fwd_round} distance from left to right on a plane and then back towards to the starting point for at least {distance_bkd_round} which walks the longest distance within simulation time using at least {num_blocks_least} blocks:<|endoftext|>"
+    prompt_string3 = f"<|endoftext|>Please generate robot design for walking at least {distance_fwd_round} distance from left to right on a plane and then back towards to the starting point which walks the longest distance within simulation time:<|endoftext|>"
+    prompt_string4 = f"<|endoftext|>Please generate robot design for walking from left to right on a plane and then back towards to the starting point which walks the longest distance within simulation time using at most {num_blocks_most} blocks:<|endoftext|>"
+    prompt_string5 = f"<|endoftext|>Please generate robot design for walking at least {distance_fwd_round} distance from left to right on a plane and then back towards to the starting point for at least {distance_bkd_round} which walks the longest distance within simulation time using at most {num_blocks_most} blocks:<|endoftext|>"
 
     return_seq = []
 
@@ -188,15 +194,19 @@ def main():
     losses = []
     robots = []
 
-    with open(options.input_file) as f:
+    f2 = open(options.input_file2)
+
+    with open(options.input_file1) as f:
         for line in f.readlines():
+            line2 = f2.readline()
             # replace all `nan` values with 1000
             line = re.sub("nan", "1000", line)
             name, loss = (
                 line.split(", ")[0],
                 float(line.split(", ")[-1].strip("\n"))
             )
-            losses.append((name, loss))
+            distance2 = float(line2.split(", ")[-1].strip("\n"))
+            losses.append((name, loss, distance2))
     losses.sort(key=lambda x: x[0])
     for v in losses:
         
@@ -213,19 +223,18 @@ def main():
         robots.append(robot[0])
     
     robots = [np.flip(robot, axis=0) for robot in robots]
-        
+    losses2 = [v[2] for v in losses]    
     losses = [v[1] for v in losses]
     
-    target_robots = sorted(zip(losses, robots), key=lambda x: x[0])[
+    
+    target_robots = sorted(zip(losses, losses2, robots), key=lambda x: x[0])[
             -int(options.top_p * len(robots)):
     ]
 
-    print (target_robots)
-
 
     for robot in tqdm.tqdm(target_robots):
-        num_blocks = np.count_nonzero(robot[1]==1)
-        seqs = bfs_one_robot(robot[1], N=options.N)
+        num_blocks = np.count_nonzero(robot[2]==1)
+        seqs = bfs_one_robot(robot[2], N=options.N)
         #programs.extend([generate_gsl_program(s, num_blocks, robots[0]) for s in seqs])
         max_blk_seq = random.randint(0, 4)
         iters = 0
@@ -236,8 +245,11 @@ def main():
         for s in random.sample(seqs,5): 
             if (iters == 0):
                 distance = robot[0]
+                distance2 = robot[1]
             else:
                 distance = random.uniform(0, robot[0])
+                distance2 = random.uniform(0, robot[1])
+                
             
             print (distance)
             if (max_blk_seq == iters):
@@ -247,7 +259,7 @@ def main():
                 blk_input_least = random.randint(1, num_blocks)
                 blk_input_most = random.randint(num_blocks, num_blocks+5)
             
-            gsl_program = generate_gsl_program(s, blk_input_least, blk_input_most, distance) 
+            gsl_program = generate_gsl_program(s, blk_input_least, blk_input_most, distance, distance2) 
             print (gsl_program)
             programs.extend(gsl_program)
             iters += 1

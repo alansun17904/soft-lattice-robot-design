@@ -77,6 +77,47 @@ def check_connected_ones(grid):
                     return False
     return True
 
+def is_stable(configuration):
+    # Get the number of rows and columns
+    rows = len(configuration)
+    cols = len(configuration[0])
+    
+    # Initialize variables to calculate the center of mass
+    x_sum = 0
+    y_sum = 0
+    count = 0
+    
+    # Sum up the coordinates of all modules
+    for i in range(rows):
+        for j in range(cols):
+            if configuration[i][j] == 1:
+                x_sum += j + 0.5
+                y_sum += rows - i - 0.5
+                count += 1
+    
+    # Calculate the center of mass
+    x_cm = x_sum / count
+    y_cm = y_sum / count
+    
+    # Check stability: center of mass must lie within the base
+    # The base is the bottom-most row where any module is present
+    base_row = rows - 1
+    base_columns = [j for j in range(cols) if configuration[base_row][j] == 1]
+    
+    # If no modules are in the base row, the configuration is unstable
+    if not base_columns:
+        return "Unstable"
+    
+    # The base spans from the minimum to the maximum column index in the base row
+    base_min = min(base_columns)
+    base_max = max(base_columns)
+    
+    # Check if the center of mass is within the horizontal base span
+    if base_min <= x_cm <= base_max:
+        return True
+    else:
+        return False
+
 
 def generate_fixed_amount_random(n, num_robots):
     
@@ -88,36 +129,57 @@ def generate_fixed_amount_random(n, num_robots):
         
         for j in range(n*n):
             robot[j] = (num // pow(2, j)) % 2
+        
+        grid = utils.to_grid(robot, n=n, m=n)
             
         
         # check valid configuration
-        valid = check_connected_ones(utils.to_grid(robot))
-        #print (utils.to_grid(robot))
-        #print ("valid: ", valid, robot)
+        valid = check_connected_ones(grid) and is_stable(grid)
     
         if valid:
             robots.append(robot)
-    
-    output = open("configs_rewards_partial45.txt", "a")
+    output = open("down_45_stairs2.txt", "a")
     
     num_processes = int(0.85 * cpu_count())
-    #num_processes = 3
     with concurrent.futures.ProcessPoolExecutor(max_workers=num_processes) as executor:
         results = executor.map(get_reward, robots)
     
     for result in results:
         output.write(result)
-        #print (result)
+
+def generate_reverse():
+    robots = []
+    
+    robot_input = open("stable45_1000.txt", "r")
+    for line in robot_input.readlines():
+        name, loss = (
+            line.split(", ")[0],
+            float(line.split(", ")[1].strip("\n"))
+        )
+
+        robots.append(np.array(name.strip('[]').split(), dtype=float))
+    
+    output = open("stable45_1000_reverse.txt", "a")
+    
+    num_processes = int(0.85 * cpu_count())
+    with concurrent.futures.ProcessPoolExecutor(max_workers=num_processes) as executor:
+        results = executor.map(get_reward, robots)
+    
+    for result in results:
+        output.write(result)
 
 def get_reward(robot):
     print (robot)
-    reward = utils.calculate_reward(robot)
+    n = int(np.sqrt(len(robot)))
+    #reward, num_stairs, stair_height = utils.calculate_reward(robot, n, n)
+    #return str(robot).replace("\n", "") + ", " + str(reward) + ", " + str(num_stairs) +  ", " + str(stair_height)+ "\n"
+
+    reward = utils.calculate_reward(robot, n, n)
     return str(robot).replace("\n", "") + ", " + str(reward) + "\n"
-    
 
-
-generate_fixed_amount_random(4, 1000)
-
+generate_reverse()   
+#generate_fixed_amount_random(4, 1000)
+#generate_fixed_amount_random(5, 1000)
 #generate_all(4)
 #generate_all(5)
 
