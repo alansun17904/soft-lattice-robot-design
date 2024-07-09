@@ -13,10 +13,10 @@ np.random.seed(0)
 real = ti.f32
 ti.init(default_fp=real)
 
-max_steps = 4096*2
+max_steps = 4096 *3 
 vis_interval = 256
 output_vis_interval = 8
-steps = 2 * 2048 // 3
+steps = 2048 *3// 3
 assert steps * 2 <= max_steps
 
 scalar = lambda: ti.field(dtype=real)
@@ -66,6 +66,11 @@ hidden = scalar()
 center = vec()
 act = scalar()
 
+best_weights1 = scalar()
+best_bias1 = scalar()
+best_weights2 = scalar()
+best_bias2 = scalar()
+
 
 def n_input_states():
     return n_sin_waves + 4 * n_objects + 2
@@ -93,6 +98,12 @@ def allocate_fields():
     ti.root.dense(ti.i, max_steps).place(center)
     ti.root.place(loss, goal)
     ti.root.lazy_grad()
+
+    ti.root.dense(ti.ij, (n_hidden, n_input_states())).place(best_weights1)
+    ti.root.dense(ti.i, n_hidden).place(best_bias1)
+    ti.root.dense(ti.ij, (n_springs, n_hidden)).place(best_weights2)
+    ti.root.dense(ti.i, n_springs).place(best_bias2)
+
 
 
 dt = 0.004
@@ -414,6 +425,12 @@ def optimize(toi, visualize):
         print(total_norm_sqr)
 
         # scale = learning_rate * min(1.0, gradient_clip / total_norm_sqr ** 0.5)
+        if (iter > 0 and min(losses) > loss[None]) or iter == 0:
+            best_weights1.copy_from(weights1)
+            best_bias1.copy_from(bias1)
+            best_weights2.copy_from(weights2)
+            best_bias2.copy_from(bias2)
+            
         gradient_clip = 0.2
         scale = gradient_clip / (total_norm_sqr**0.5 + 1e-6)
         for i in range(n_hidden):

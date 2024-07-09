@@ -57,7 +57,7 @@ class Coach():
             #if currRobot[0][-1] == 1:
             if np.count_nonzero(currRobot) == 4:
                 if s not in self.Es:
-                    self.Es[s] = calculate_reward(currRobot)
+                    self.Es[s], _ = calculate_reward(currRobot, 3, 11, 1)
                 r = self.Es[s]
                 return [(x[0], x[1], r) for x in trainExamples]
 
@@ -70,6 +70,7 @@ class Coach():
             iterationTrainExamples = deque([], maxlen=self.args.maxlenOfQueue)
             
            
+            #self.mcts = MCTS(robot = np.zeros([3*3], dtype=np.float32), network = self.nnet, args=self.args)  # reset search tree
             for _ in range(self.args.numEps):
                 self.mcts = MCTS(robot = np.zeros([3*3], dtype=np.float32), network = self.nnet, args=self.args)  # reset search tree
                 iterationTrainExamples += self.executeEpisode()

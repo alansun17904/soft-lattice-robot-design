@@ -233,8 +233,8 @@ def compute_loss(t: ti.i32):
     loss[None] = -x[t, head_id][0]
 
 
-#gui = ti.GUI("Mass Spring Robot", (512, 512), background_color=0xFFFFFF)
-gui = ti.GUI(show_gui=False)
+gui = ti.GUI("Mass Spring Robot", (512, 512), background_color=0xFFFFFF)
+#gui = ti.GUI(show_gui=False)
 
 
 def forward(output=None, draw_env=False, visualize=True):
@@ -419,7 +419,7 @@ def main():
         with open(options.losses_fname, "a+") as f:
             f.write('{"' + f"{options.fname}" + '"' + f":{losses}" + "}" + "\n")
     else:
-        optimize(toi=True, visualize=True)
+        losses=optimize(toi=True, visualize=True)
         clear()
         final_loss = forward("final{}".format(options.fname))
         with open(options.fname.replace(".json", ".txt"), "w") as f:
@@ -431,3 +431,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+    print(act.to_numpy())
+    print(act.to_numpy().max(), act.to_numpy().min())
+    print(spring_actuation.to_numpy())

@@ -3,8 +3,8 @@ from NNetWrapper import NNetWrapper
 from utils import dotdict
 
 args = dotdict({
-    'numIters': 10,              # Number of training iterations.
-    'numEps': 100,               # Number of complete self-play games to simulate during a new iteration.
+    'numIters': 100,              # Number of training iterations.
+    'numEps': 200,               # Number of complete self-play games to simulate during a new iteration.
     'tempThreshold': 2,        
     'maxEpisodeLength': 5,
     'updateThreshold': 0.6,     # During arena playoff, new neural net will be accepted if threshold or more of games are won.

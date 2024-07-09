@@ -229,16 +229,39 @@ def advance_no_toi(t: ti.i32):
 
 
 @ti.kernel
-def compute_loss(t: ti.i32):
-    loss[None] = x[t, head_id][0]
+def compute_loss(t: ti.i32, x_max: ti.f32):
+    #loss[None] = -x[t, head_id][0]
+    print(x_max)
+    #print (x_max)
+    
+    #loss[None] = (x[t, head_id][0]-0.1) * (x[t, head_id][0]-0.1) +  (x_max - 1.0) * (x_max -1.0) * 1000
+    a = (x[t, head_id][0]-0.1) * (x[t, head_id][0]-0.1) # final and start dist
+    b = (x_max - 1.0) * (x_max -1.0) # max and right_goal dist
+    
+    #x_tot = (x_max - x[t, head_id][0]) + (x_max - 0.1)
+    # max  x_tot - (1.0-0.1)
 
+    if (x_max < 1.0):
+        loss[None] = 10 * b
+    else:
+        loss[None] = 100 * a + 10 * b
+
+    #score = -x_tot
+    
+    #if (x_max > 1.0):
+    #    score += 1000000
+
+    #if x[t, head_id][0] < 0.1:
+    #    score += 1000000
+
+    #loss[None] = score    
 
 #gui = ti.GUI("Mass Spring Robot", (512, 512), background_color=0xFFFFFF)
 gui = ti.GUI(show_gui=False)
 
 
 def forward(output=None, visualize=True):
-    goal[None] = [0.1, 0.2]
+    goal[None] = [1, 0.2]
 
     interval = vis_interval
     if output:
@@ -246,7 +269,7 @@ def forward(output=None, visualize=True):
         os.makedirs("mass_spring/{}/".format(output), exist_ok=True)
 
     total_steps = steps if not output else steps * 2
-
+    x_max = -1000
     for t in range(1, total_steps):
         compute_center(t - 1)
         nn1(t - 1)
@@ -257,6 +280,7 @@ def forward(output=None, visualize=True):
             advance_toi(t)
         else:
             advance_no_toi(t)
+        x_max = max(x_max, x[t-1, head_id][0])
 
         if (t + 1) % interval == 0:
             gui.line(
@@ -268,7 +292,7 @@ def forward(output=None, visualize=True):
             if not visualize and not os.path.exists(f"env_imgs/{options.envimg_fname}"):
                 gui.show(f"env_imgs/{options.envimg_fname}")
                 loss[None] = 0
-                compute_loss(steps - 1)
+                compute_loss(steps - 1, x_max)
                 return
 
             def circle(x, y, color):
@@ -413,8 +437,8 @@ def main():
     # since we are starting on the other side, we have to transform all of the
     # x-coordinates using the function f(x) = 1-x.
     robot = json.load(open(options.fname))
-    for i in range(len(robot["objects"])):
-        robot["objects"][i][0] = 1 - robot["objects"][i][0]
+    #for i in range(len(robot["objects"])):
+    #    robot["objects"][i][0] = 1 - robot["objects"][i][0]
     setup_robot(**robot)
 
     if options.task == "plot":

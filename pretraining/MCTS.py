@@ -178,7 +178,7 @@ class MCTS:
         if robot_count == 4:
             #print("end state")
             if s not in self.Es:
-                self.Es[s] = utils.calculate_reward(state)
+                self.Es[s], _ = utils.calculate_reward(state, 3, 11, 1)
             return self.Es[s]
     
 

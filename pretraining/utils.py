@@ -232,13 +232,13 @@ def calculate_reward(state, n, obj, target_distance):
     # return 0
     
     # this block is reads lines from previously generated configurations 
-    #f = open("./data/configs/all_configs_rewards.txt", "r")
-    #print (state)
-    #for line in f:
-    #    if line.split(",")[0] == str(state):
-    #        reward = float(line.split(",")[1])
-    #        print ("Reward form dict", reward)
-    #        return reward
+    f = open("./all_configs_rewards.txt", "r")
+    print (state)
+    for line in f:
+        if line.split(",")[0] == str(state):
+            reward = float(line.split(",")[1])
+            print ("Reward form dict", reward)
+            return reward, 10
     # test
     #return 0 
     
@@ -261,11 +261,11 @@ def calculate_reward(state, n, obj, target_distance):
     # Construct the command as you would type it in the terminal
     #
     if obj == 11:
-        command = ["python3.8", "../simulation/mass_spring.py", f"./robot/{name}.json", "train", "losses-test.json", "flat.png" ]
+        command = ["python3", "../simulation/mass_spring.py", f"./robot/{name}.json", "train", "losses-test.json", "flat.png" ]
     elif obj == 12:
-        command = ["python3.8", "../simulation/mass_spring.py", f"./robot/{name}.json", "train", "losses-test.json", "flat.png", "--steps=4096"]
+        command = ["python3", "../simulation/mass_spring.py", f"./robot/{name}.json", "train", "losses-test.json", "flat.png", "--steps=4096"]
     elif obj == 31:
-        command = ["python3.8", "../simulation/mass_spring_reverse.py", f"./robot/{name}.json", "train", "losses-test.json", "flat.png", "--steps=4096"]
+        command = ["python3", "../simulation/mass_spring_reverse.py", f"./robot/{name}.json", "train", "losses-test.json", "flat.png", "--steps=4096"]
     else:
         return 0
         
