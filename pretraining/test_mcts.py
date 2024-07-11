@@ -7,6 +7,7 @@ import numpy as np
 import utils
 import torch
 import matplotlib.pyplot as plt
+import re
 
 def main():
     nnet = NNetWrapper()
@@ -42,11 +43,22 @@ def main():
     print (spearman_correlation(torch.from_numpy((pi * valids)[(pi*valids)!=0]), torch.from_numpy(rewards[rewards!=0])))
 
     fig, ax = plt.subplots()
-    im = ax.imshow(pi[0:25].reshape((5, 5)))
-    plt.savefig("heatmap.png")
-    
+    im = ax.imshow((pi * valids)[0:25].reshape((5, 5)))
+    ax.invert_yaxis()
 
+    cbar = ax.figure.colorbar(im, ax=ax)
     
+    plt.savefig("heatmap_pi.png")
+    
+    fig, ax = plt.subplots()
+    im = ax.imshow(rewards[0:25].reshape((5, 5)))
+    ax.invert_yaxis()
+    cbar = ax.figure.colorbar(im, ax=ax)
+    plt.savefig("heatmap_rewards.png")
+
+    file_path = 'model_eval.txt'
+    sequences = read_sequences_from_file(file_path)
+    plot_sequences(sequences)
 
 
 def _get_ranks(x: torch.Tensor) -> torch.Tensor:
@@ -69,6 +81,36 @@ def spearman_correlation(x: torch.Tensor, y: torch.Tensor):
     down = n * (n ** 2 - 1.0)
     return 1.0 - (upper / down)
 
+def read_sequences_from_file(file_path):
+    sequences = []
+    current_sequence = []
+    
+    with open(file_path, 'r') as file:
+        for line in file:
+            # Remove leading and trailing whitespace
+            line = line.strip()
+            if line:
+                # Add numbers to the current sequence
+                current_sequence.extend(re.findall(r"[-+]?\d*\.\d+|\d+", line))
+                
+                # If the line ends with ']', it marks the end of a sequence
+                if line.endswith(']'):
+                    # Convert the current sequence to a numpy array and add to sequences
+                    sequences.append(np.array(current_sequence, dtype=float))
+                    # Clear current sequence for the next one
+                    current_sequence = []
+    return sequences
+
+def plot_sequences(sequences, y_label='Spearman correlation', x_label='Iteration'):
+    plt.figure(figsize=(10, 5))
+    for i, sequence in enumerate(sequences):
+        plt.plot(sequence, marker='o', label=f'Sequence {i+1}')
+    plt.xlabel(x_label)
+    plt.ylabel(y_label)
+    plt.title(f'{y_label} vs {x_label}')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
 
 
 main()
