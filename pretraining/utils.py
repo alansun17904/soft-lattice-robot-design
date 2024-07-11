@@ -63,7 +63,7 @@ def check_valid(tensor, index):
     if i == 0:
         # check column n_grid are all zeros
         for j_tmp in range(0, m_grid):
-            if state[j_tmp * (n_grid+1) - 1] == 1:
+            if state[j_tmp * (n_grid) - 1] == 1:
                 return False
         if j == m_grid + 1 or j == 0:
             return False
@@ -486,6 +486,25 @@ def count_occurances():
             else:
                 counts[state] = 1
     return counts
+def _get_ranks(x: torch.Tensor) -> torch.Tensor:
+    tmp = x.argsort()
+    ranks = torch.zeros_like(tmp)
+    ranks[tmp] = torch.arange(len(x))
+    return ranks
+
+def spearman_correlation_any(x: torch.Tensor, y: torch.Tensor):
+    """Compute correlation between 2 1-D vectors
+    Args:
+        x: Shape (N, )
+        y: Shape (N, )
+    """
+    x_rank = _get_ranks(x)
+    y_rank = _get_ranks(y)
+
+    n = x.size(0)
+    upper = 6 * torch.sum((x_rank - y_rank).pow(2))
+    down = n * (n ** 2 - 1.0)
+    return 1.0 - (upper / down)
 
 def spearman_correlation():
     print ("Spearman correlation")
@@ -544,3 +563,4 @@ class AverageMeter(object):
 class dotdict(dict):
     def __getattr__(self, name):
         return self[name]
+

@@ -3,7 +3,7 @@ from NNetWrapper import NNetWrapper
 from utils import dotdict
 
 args = dotdict({
-    'numIters': 100,              # Number of training iterations.
+    'numIters': 300,              # Number of training iterations.
     'numEps': 200,               # Number of complete self-play games to simulate during a new iteration.
     'tempThreshold': 2,        
     'maxEpisodeLength': 5,

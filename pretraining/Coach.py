@@ -2,13 +2,13 @@ import torch
 import os
 import pickle
 from MCTS import MCTS
-from utils import increment_state, calculate_reward
+import utils
 import numpy as np
 from random import shuffle
 from collections import deque
 import logging
 import random
-
+from tqdm import tqdm
 
 log = logging.getLogger(__name__)
 
@@ -49,21 +49,28 @@ class Coach():
             #action = np.random.choice(len(pi), p=pi)  #this line is a bug so we can just run one iteration
             action = np.random.choice(len(pi), p=list(zip(*pi))[0])
             action = pi[action][1]
-            currRobot = increment_state(currRobot, action)
+            trainExamples.append([currRobot, pi])
+
+            currRobot = utils.increment_state(currRobot, action)
             s = np.array2string(currRobot, prefix="", suffix="")
 
-            trainExamples.append([currRobot, pi])
             
             #if currRobot[0][-1] == 1:
             if np.count_nonzero(currRobot) == 4:
                 if s not in self.Es:
-                    self.Es[s], _ = calculate_reward(currRobot, 3, 11, 1)
+                    self.Es[s], _ = utils.calculate_reward(currRobot, 3, 11, 1)
                 r = self.Es[s]
                 return [(x[0], x[1], r) for x in trainExamples]
 
 
     def learn(self):
-        for i in range(1, self.args.numIters+1):
+        #pis = np.zeros([self.args.numIters, 26])
+        cor0 = np.zeros(self.args.numIters)
+        cor1 = np.zeros(self.args.numIters)
+        cor2 = np.zeros(self.args.numIters)
+        cor3 = np.zeros(self.args.numIters)
+
+        for i in tqdm(range(1, self.args.numIters+1)):
             # bookkeeping
             print(f'Starting iteration {i+1}/{self.args.numIters}')
             # examples of the iteration
@@ -100,8 +107,41 @@ class Coach():
             self.nnet.save_checkpoint(folder=self.args.checkpoint, filename='temp.pth.tar')
             self.nnet.train(trainExamples)
             self.nnet.save_checkpoint(folder=self.args.checkpoint, filename='best.pth.tar')
-        
+            state0 = np.zeros([3*3], dtype=np.float32)
+            state0[0] = 1
+            state0[1] = 1
+            state0[2] = 1
 
+            cor0[i-1] = self.evaluate(state0)
+            
+            state1 = np.zeros([3*3], dtype=np.float32)
+            state1[0] = 1
+            state1[1] = 1
+            state1[3] = 1
+
+            cor1[i-1] = self.evaluate(state1)
+            
+            state2 = np.zeros([3*3], dtype=np.float32)
+            state2[0] = 1
+            state2[1] = 1
+            state2[2] = 1
+            state2[4] = 1
+
+            cor2[i-1] = self.evaluate(state2)
+
+            state3 = np.zeros([3*3], dtype=np.float32)
+            state3[0] = 1
+            state3[1] = 1
+
+            cor3[i-1] = self.evaluate(state3)
+
+
+
+        print (cor0) 
+        print (cor1) 
+        print (cor2) 
+        print (cor3) 
+        
     def saveTrainExamples(self , iteration):
         folder = self.args.checkpoint
         if not os.path.exists(folder):
@@ -111,3 +151,20 @@ class Coach():
             pickle.dump(self.trainExamplesHistory, f)
         f.closed
         log.info(f'Saving trainExamples to {filename}')
+
+    def evaluate(self,state):
+        pi, v = self.nnet.predict(state)
+        valids = utils.get_valid_actions(state)
+
+        rewards = np.zeros_like(pi)
+
+        for i in range(25):
+            if valids[i] == 1: 
+                next_state = utils.increment_state(state, i) 
+                rewards[i], _ = utils.calculate_reward(next_state, 3, 11, 1)
+
+        eps = 0.0000001
+
+        cor = (utils.spearman_correlation_any(torch.from_numpy((pi * valids)[(pi*valids)!=0]), torch.from_numpy(rewards[rewards!=0])))
+        return cor
+
