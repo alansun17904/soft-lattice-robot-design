@@ -17,8 +17,6 @@ def main():
     state = np.zeros([3*3], dtype=np.float32)
     state[0] = 1
     state[1] = 1
-    state[3] = 1
-    state[6] = 1
 
 
     pi, v = nnet.predict(state)
@@ -47,18 +45,21 @@ def main():
     ax.invert_yaxis()
 
     cbar = ax.figure.colorbar(im, ax=ax)
-    
+
+    plt.title("Policy")
     plt.savefig("heatmap_pi.png")
     
     fig, ax = plt.subplots()
     im = ax.imshow(rewards[0:25].reshape((5, 5)))
     ax.invert_yaxis()
     cbar = ax.figure.colorbar(im, ax=ax)
+    plt.title("Rewards")
     plt.savefig("heatmap_rewards.png")
+    plt.show()
 
     file_path = 'model_eval.txt'
     sequences = read_sequences_from_file(file_path)
-    plot_sequences(sequences)
+    #plot_sequences(sequences)
 
 
 def _get_ranks(x: torch.Tensor) -> torch.Tensor:
