@@ -20,10 +20,10 @@ class Coach():
     """
 
     def __init__(self, nnet, args):
-        robot = np.zeros([3*3], dtype=np.float32)
-        robot[0] = 1
+        state = np.zeros([3*3+1], dtype=np.float32)
+        state[0] = 1
         self.nnet = nnet
-        self.mcts = MCTS(robot = robot, network=nnet, args=args)
+        self.mcts = MCTS(robot = state, network=nnet, args=args)
         self.trainExamplesHistory = []
         self.args = args
         self.Es = {}
@@ -31,8 +31,8 @@ class Coach():
     def executeEpisode(self):
         trainExamples = []
         episodeStep = 0
-        currRobot = np.zeros([3*3], dtype=np.float32)
-        currRobot[0] = 1
+        currState = np.zeros([3*3+1], dtype=np.float32)
+        currState[0] = 1
 
         while True:
             episodeStep += 1
@@ -40,8 +40,8 @@ class Coach():
             # rewrite this, base on current robot get probabilities
     
             temp = 1 #int(episodeStep < self.args.tempThreshold)
-            s = np.array2string(currRobot, prefix="", suffix="")
-            pi = self.mcts.get_action_probabilities(currRobot, temp=temp)
+            s = np.array2string(currState, prefix="", suffix="")
+            pi = self.mcts.get_action_probabilities(currState, temp=temp)
 
             print(f'Probabilities: {pi}')
             print(f'Type of pi: {type(pi)}')
@@ -49,16 +49,17 @@ class Coach():
             #action = np.random.choice(len(pi), p=pi)  #this line is a bug so we can just run one iteration
             action = np.random.choice(len(pi), p=list(zip(*pi))[0])
             action = pi[action][1]
-            trainExamples.append([currRobot, pi])
+            trainExamples.append([currState, pi])
 
-            currRobot = utils.increment_state(currRobot, action)
-            s = np.array2string(currRobot, prefix="", suffix="")
+            currState = utils.increment_state(currState, action)
+            s = np.array2string(currState, prefix="", suffix="")
+            print("after action probs: ", currState)
 
             
-            #if currRobot[0][-1] == 1:
-            if np.count_nonzero(currRobot) == 4:
+            if currState[-1] == 1 or np.count_nonzero(currState) == 9:
+            #if np.count_nonzero(currState) == 3:
                 if s not in self.Es:
-                    self.Es[s], _ = utils.calculate_reward(currRobot, 3, 11, 1)
+                    self.Es[s], _ = utils.calculate_reward(currState[:-1], 3, 11, 1)
                 r = self.Es[s]
                 return [(x[0], x[1], r) for x in trainExamples]
 
@@ -77,9 +78,8 @@ class Coach():
             iterationTrainExamples = deque([], maxlen=self.args.maxlenOfQueue)
             
            
-            #self.mcts = MCTS(robot = np.zeros([3*3], dtype=np.float32), network = self.nnet, args=self.args)  # reset search tree
             for _ in range(self.args.numEps):
-                self.mcts = MCTS(robot = np.zeros([3*3], dtype=np.float32), network = self.nnet, args=self.args)  # reset search tree
+                self.mcts = MCTS(robot = np.zeros([3*3+1], dtype=np.float32), network = self.nnet, args=self.args)  # reset search tree
                 iterationTrainExamples += self.executeEpisode()
             
             self.trainExamplesHistory.append(iterationTrainExamples)

@@ -51,9 +51,9 @@ def check_valid(tensor, index):
 
     i = index % (n_grid + 2)
     j = index // (n_grid + 2)
-    if index == (n_grid+2)*(n_grid +2)+1:
+    if index == (n_grid+2)*(n_grid +2):
         return False
-        # return True
+        #return True
     
     if 0 < i < n_grid + 1 and 0 < j < m_grid + 1:
         if state[(i-1) + (j-1) * n_grid] == 1:
@@ -183,6 +183,7 @@ def get_valid_actions(tensor):
             if check_valid(tensor, i):
                 valid_actions[i] = 1
     valid_actions[(n_grid+2)*(n_grid +2)] = 0
+    print (valid_actions)
     return valid_actions 
 
 def increment_state(tensor, best_act):
@@ -191,9 +192,9 @@ def increment_state(tensor, best_act):
     best_act: index in (n_grid+2) * (m_grid+2) of the best action to take.
     """
     state = tensor_to_list(tensor)
-    if best_act == (n_grid+2)*(n_grid +2):
-        state[-1] = 1
-        return list_to_tensor(state)
+    if best_act == (n_grid+2)*(n_grid +2) or best_act == -1:
+        tensor[-1] = 1
+        return tensor
 
     i = best_act % (n_grid + 2)
     j = best_act // (n_grid + 2)
@@ -220,7 +221,7 @@ def increment_state(tensor, best_act):
         # no shifting
         state[(j-1) * n_grid + i - 1] = 1
     assert len(state) == n_grid * m_grid, f"state length is {len(state)} instead of {n_grid * m_grid}. Length of tensor is {tensor.shape}"
-    return list_to_tensor(state)
+    return np.append(list_to_tensor(state), 0)
 
 def calculate_reward(state, n, obj, target_distance):
     """
@@ -232,15 +233,15 @@ def calculate_reward(state, n, obj, target_distance):
     # return 0
     
     # this block is reads lines from previously generated configurations 
-    f = open("./all_configs_rewards.txt", "r")
-    print (state)
-    for line in f:
-        if line.split(",")[0] == str(state):
-            reward = float(line.split(",")[1])
-            print ("Reward form dict", reward)
-            return reward, 10
+    #f = open("./all_configs_rewards.txt", "r")
+    #print (state)
+    #for line in f:
+    #    if line.split(",")[0] == str(state):
+    #        reward = float(line.split(",")[1])
+    #        print ("Reward form dict", reward)
+    #        return reward, 10
     # test
-    #return 0 
+    return 0.2, 10 
     
     # transfer to json configuration
     grid = to_grid(state, n, n)
