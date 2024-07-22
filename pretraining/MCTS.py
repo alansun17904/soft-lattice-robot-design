@@ -107,8 +107,6 @@ class MCTS:
         temp_state = state
         for i in range(self.num_simulations):
             #    futures[i] = executor.submit(self.search, state, lock=lock)
-            print ("i = ", i)
-            print ("temp_state", temp_state)
             search_val = self.search(temp_state)
             temp_state = state 
 
