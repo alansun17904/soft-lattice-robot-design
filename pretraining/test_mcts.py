@@ -9,27 +9,24 @@ import torch
 import matplotlib.pyplot as plt
 import re
 
-def main():
-    nnet = NNetWrapper()
-    nnet.load_checkpoint(folder=args.checkpoint, filename='best.pth.tar')
-
-    print (type(nnet)) 
-    state = np.zeros([3*3], dtype=np.float32)
-    state[0] = 1
-    state[1] = 1
-
-
-    pi, v = nnet.predict(state)
+def infer_one_step(state, nnet):
+    pi, v = nnet.predict(state[:-1])
     print (pi, v)
     
     valids = utils.get_valid_actions(state)
     
     rewards = np.zeros_like(pi)
 
-    for i in range(25):
+    for i in range(25+1):
         if valids[i] == 1:
             next_state = utils.increment_state(state, i)
-            rewards[i], _ = utils.calculate_reward(next_state, 3, 11, 1)
+            rewards[i], _ = utils.calculate_reward(next_state[:-1], 3, 11, 1)
+    pi[24] = pi[25]
+    rewards[24] = rewards[25]
+    valids[24] = valids[25]
+    pi[25] = 0
+    rewards[25] = 0
+    valids[25] = 0
     print (pi)
     print (rewards)
     print (valids)
@@ -57,9 +54,10 @@ def main():
     plt.savefig("heatmap_rewards.png")
     plt.show()
 
-    file_path = 'model_eval.txt'
-    sequences = read_sequences_from_file(file_path)
+    #file_path = 'model_eval.txt'
+    #sequences = read_sequences_from_file(file_path)
     #plot_sequences(sequences)
+    return pi
 
 
 def _get_ranks(x: torch.Tensor) -> torch.Tensor:
@@ -113,5 +111,20 @@ def plot_sequences(sequences, y_label='Spearman correlation', x_label='Iteration
     plt.grid(True)
     plt.show()
 
+def main():
+    nnet = NNetWrapper()
+    nnet.load_checkpoint(folder=args.checkpoint, filename='best.pth.tar')
 
+    print (type(nnet)) 
+    state = np.zeros([3*3+1], dtype=np.float32)
+    state[0] = 1
+    while True:
+        pi = infer_one_step(state, nnet)
+        print ("best step: ",np.argmax(pi))
+        best_step = np.argmax(pi)
+        if (best_step == 24) or best_step == 25:
+            break
+        state = utils.increment_state(state, np.argmax(pi))
+        print (state)
+    
 main()

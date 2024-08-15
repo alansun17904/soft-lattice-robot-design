@@ -104,18 +104,15 @@ class MCTS:
             #  from the current state until a leaf node is found or
             # the maximum depth is reached which ever comes first.
         #    futures = [None for _ in range(self.num_simulations)]
-        temp_state = state
         for i in range(self.num_simulations):
             #    futures[i] = executor.submit(self.search, state, lock=lock)
-            search_val = self.search(temp_state)
-            temp_state = state 
-
+            search_val = self.search(state)
+            
 
         next_state_actions_arr = utils.get_valid_actions(state)
         next_state_actions = [i for i, x in enumerate(next_state_actions_arr) if x == 1]
-        print("next state actions: ", next_state_actions)
+        #print("next state actions: ", next_state_actions)
         s = np.array2string(state, prefix="", suffix="")
-        print("s", s)
 
         counts = [self.Nsa[(s, a)] if (s, a) in self.Nsa else 0 for a in next_state_actions]
 
@@ -128,7 +125,6 @@ class MCTS:
             return list(zip(probs, searched_action_space))
         
         counts = [x ** (1.0 / temp) for x in counts]
-        print (counts)
         probs = [x / float(sum(counts)) for x in counts]
 
         return list(zip(probs, searched_action_space))
@@ -171,7 +167,7 @@ class MCTS:
         outcome is propogated up the search path. The values of Ns, Nsa, Qsa are
         updated.
         """
-        #print ("search function") 
+        #print ("search function", state) 
         robot_count = np.count_nonzero(state)
         t = torch.tensor([robot_count])  # .to(self.device)
         s = np.array2string(state, prefix="", suffix="")
@@ -211,7 +207,7 @@ class MCTS:
         best_act = -1
 
         # pick the action with the highest upper confidence bound
-        for a in range(5 * 5):
+        for a in range(5 * 5+1):
             if valids[a]:
                 if (s, a) in self.Qsa:
                     u = self.Qsa[(s, a)] + self.args.cpuct * self.Ps[s][a] * math.sqrt(self.Ns[s]) / (
@@ -225,10 +221,7 @@ class MCTS:
 
         a = best_act
         #print("best_act", a)
-        #print("state", state)
         next_s = utils.increment_state(state, a)
-        
-        #print("next_s", next_s)
         v = self.search(next_s)
 
         if (s, a) in self.Qsa:

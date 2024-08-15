@@ -22,6 +22,8 @@ generator = pipeline("text-generation", model=model, tokenizer=tokenizer)
 
 prompt = "<|endoftext|> Please design a robot design for walking from left to right on a plane, with aspect ratio 2<|endoftext|> create block0; create block1;"
 #prompt = "<|endoftext|> Please design a robot design for walking at least 0.2 distance from left to right on a plane, using at most 5 blocks<|endoftext|> create block0; create block1;"
+prompt = "<|endoftext|> Please generate robot design for walking from left to right on a plane. The robot we want should have aspect ratio 0.5:<|endoftext|> create block0; create block1;"
+
 
 inputs = tokenizer(prompt, return_tensors="pt", add_special_tokens=False).input_ids
 print (inputs)

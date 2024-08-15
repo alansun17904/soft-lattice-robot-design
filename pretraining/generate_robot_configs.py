@@ -134,11 +134,11 @@ def generate_fixed_amount_random(n, num_robots):
             
         
         # check valid configuration
-        valid = check_connected_ones(grid) and is_stable(grid)
+        valid = check_connected_ones(grid) #and is_stable(grid)
     
         if valid:
             robots.append(robot)
-    output = open("down_45_stairs2.txt", "a")
+    output = open("data/configs/random10000configs.txt", "a")
     
     num_processes = int(0.85 * cpu_count())
     with concurrent.futures.ProcessPoolExecutor(max_workers=num_processes) as executor:
@@ -174,12 +174,32 @@ def get_reward(robot):
     #reward, num_stairs, stair_height = utils.calculate_reward(robot, n, n)
     #return str(robot).replace("\n", "") + ", " + str(reward) + ", " + str(num_stairs) +  ", " + str(stair_height)+ "\n"
 
-    reward = utils.calculate_reward(robot, n, n)
-    return str(robot).replace("\n", "") + ", " + str(reward) + "\n"
+    reward = utils.calculate_reward(robot, n, 11, 1)
+    return str(robot).replace("\n", "") + ", " + str(reward[0]) + "\n"
 
-generate_reverse()   
+def generate_scores():
+    # given file containing robot configs, create file with scores
+
+    robots = []
+    
+    robot_input = open("selected_robot_configs.txt", "r")
+    for line in robot_input.readlines():
+        name = line.strip("\n")
+        robots.append(np.array(name.strip('[]').split(), dtype=float))
+    
+    output = open("robot_config_sampled.txt", "a")
+    
+    num_processes = int(0.85 * cpu_count())
+    with concurrent.futures.ProcessPoolExecutor(max_workers=num_processes) as executor:
+        results = executor.map(get_reward, robots)
+    
+    for result in results:
+        output.write(result)
+
+#generate_reverse()   
+#generate_scores()
 #generate_fixed_amount_random(4, 1000)
-#generate_fixed_amount_random(5, 1000)
+generate_fixed_amount_random(5, 10000)
 #generate_all(4)
 #generate_all(5)
 

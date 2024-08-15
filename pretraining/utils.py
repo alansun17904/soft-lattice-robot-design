@@ -182,8 +182,8 @@ def get_valid_actions(tensor):
     for i in range((n_grid + 2)*(n_grid + 2)):
             if check_valid(tensor, i):
                 valid_actions[i] = 1
-    valid_actions[(n_grid+2)*(n_grid +2)] = 0
-    print (valid_actions)
+    valid_actions[(n_grid+2)*(n_grid +2)] = 1
+    #print (valid_actions)
     return valid_actions 
 
 def increment_state(tensor, best_act):
@@ -193,8 +193,7 @@ def increment_state(tensor, best_act):
     """
     state = tensor_to_list(tensor)
     if best_act == (n_grid+2)*(n_grid +2) or best_act == -1:
-        tensor[-1] = 1
-        return tensor
+        return np.append(list_to_tensor(state), 1)
 
     i = best_act % (n_grid + 2)
     j = best_act // (n_grid + 2)
@@ -233,15 +232,14 @@ def calculate_reward(state, n, obj, target_distance):
     # return 0
     
     # this block is reads lines from previously generated configurations 
-    #f = open("./all_configs_rewards.txt", "r")
-    #print (state)
-    #for line in f:
-    #    if line.split(",")[0] == str(state):
-    #        reward = float(line.split(",")[1])
-    #        print ("Reward form dict", reward)
-    #        return reward, 10
+    f = open("./data/configs/all_configs_rewards.txt", "r")
+    print (state)
+    for line in f:
+        if line.split(",")[0] == str(state):
+            reward = float(line.split(",")[1])
+            print ("Reward form dict", reward)
+            return reward, 10
     # test
-    return 0.2, 10 
     
     # transfer to json configuration
     grid = to_grid(state, n, n)
